@@ -592,8 +592,7 @@ const BASE = {
   rubber:{color:0x22262A, metalness:0.1,  roughness:0.9},
   blade: {color:0x2E3338, metalness:0.2,  roughness:0.55},
   glass: {color:0x9FC4D8, metalness:0.1,  roughness:0.15, transparent:true, opacity:0.32},
-  copper:{color:0xB07A4A, metalness:0.85, roughness:0.35},
-  blur:  {color:0xBFC5CB, metalness:0.55, roughness:0.3, transparent:true, opacity:0.4, depthWrite:false}
+  copper:{color:0xB07A4A, metalness:0.85, roughness:0.35}
 };
 let linerTex;
 { const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,256,256); g.fillStyle='#8a8a8a';
@@ -643,15 +642,10 @@ function impeller(eye, tip, len, n, mat, mat2){ // centrifugal impeller: hub lat
       pos.push(x, rh*Math.cos(a), rh*Math.sin(a), x - (1-s)*0.02, ro*Math.cos(a), ro*Math.sin(a)); }
     for(let i=0;i<seg;i++){ const k=base+i*2; idx.push(k,k+1,k+2, k+1,k+3,k+2); } }
   const bg=new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); bg.setIndex(idx); bg.computeVertexNormals();
-  const bladeMesh=new THREE.Mesh(bg, mat2||mat); g.add(bladeMesh);
-  const op=[]; for(let i=0;i<=seg;i++){ const s=i/seg; op.push([ -len/2+len*s-(1-s)*0.02, Math.min(tip, eye+(tip-eye)*Math.pow(s,0.55)+0.006) ]); }
-  const blur=latheX(op, M('blur'), 0); blur.visible=false; g.add(blur); blurSets.push({sharp:bladeMesh, blur:blur});
-  return g; }
+  g.add(new THREE.Mesh(bg, mat2||mat)); return g; }
 function turbineDisc(rHub, rTip, w, n, mat, matB, twist=0.5){ const g=new THREE.Group(); g.add(cylX(rHub, rHub, w, mat, 0)); g.add(cylX(0.5*rHub,0.5*rHub,w*1.6,mat,0));
   const bg=new THREE.BoxGeometry(w*0.9, rTip-rHub, Math.max(0.004, TAU*rHub/n*0.3));
-  const blades=new THREE.Group();
-  for(let i=0;i<n;i++){ const b=new THREE.Mesh(bg, matB||mat); const a=i/n*TAU; const rr=(rHub+rTip)/2; b.position.set(0, rr*Math.cos(a), rr*Math.sin(a)); b.rotation.x=a; b.rotation.y=twist; blades.add(b);} g.add(blades);
-  const blur=tubeX(rTip, rHub*0.99, w*0.92, M('blur'), 0); blur.visible=false; g.add(blur); blurSets.push({sharp:blades, blur:blur});
+  for(let i=0;i<n;i++){ const b=new THREE.Mesh(bg, matB||mat); const a=i/n*TAU; const rr=(rHub+rTip)/2; b.position.set(0, rr*Math.cos(a), rr*Math.sin(a)); b.rotation.x=a; b.rotation.y=twist; g.add(b);}
   return g; }
 function vaneRing(rIn, rOut, w, n, mat, twist=-0.5){ const g=new THREE.Group(); g.add(tubeX(rOut+0.012, rOut, w, mat, 0)); g.add(tubeX(rIn, rIn-0.01, w, mat, 0));
   const bg=new THREE.BoxGeometry(w*0.9, rOut-rIn, 0.005);
@@ -669,10 +663,9 @@ function blade(span, cRoot, cTip, tRoot, tTip, thick, mat){ // twisted flat blad
 
 // ---------- Rotor registry (for spin) ----------
 const rotors = {hp:[], lp:[], pt:[], lay:[], idler:[], prop:[]};
-// A bladed disc turning fast aliases badly against the frame rate (blade pitch ~= travel per
-// frame), which reads as judder. While spinning we hide the discrete blades and show a
-// translucent swept-envelope proxy instead - what a spinning rotor actually looks like.
-const blurSets = [];
+// Note: the turbine discs carry 41-53 blades, so at NH/NL speed the blade pitch is close to the
+// per-frame travel and the discs strobe (wagon-wheel effect). Blades are deliberately left
+// visible anyway - the study value of seeing them outweighs the artefact.
 function rotor(kind, obj){ rotors[kind].push(obj); return obj; }
 const PY = 0.36; // propeller axis height above turbomachinery axis
 const casingMeshes = [];
@@ -934,7 +927,6 @@ function setColorMode(on){ colorMode=on; legendEl.innerHTML = on ? Object.values
 let labelsOn=false;
 btn('labelBtn').onclick=()=>{ labelsOn=!labelsOn; labelGroup.visible=labelsOn && parseFloat(explodeSlider.value)<0.05; btn('labelBtn').classList.toggle('on',labelsOn); };
 function setSpin(on){ spinOn=on; btn('spinBtn').classList.toggle('on',on);
-  blurSets.forEach(b=>{ b.sharp.visible=!on; b.blur.visible=on; });
   if(on && !cutOn && parseFloat(xraySlider.value)>0.6){ xraySlider.value=0.3; setXray(0.3); }   // rotors live inside the casings
 }
 btn('spinBtn').onclick=()=>setSpin(!spinOn);
