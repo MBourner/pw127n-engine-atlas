@@ -1,0 +1,986 @@
+<title>PW127N Engine Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#EDF0F2; --panel:#FFFFFF; --panel2:#F4F6F8; --line:#D3DAE0; --text:#17222B; --muted:#5B6B78;
+  --accent:#1F8A9E; --accent-ink:#0F5F6E; --accent-soft:#D9EEF2; --hot:#D9622B; --cold:#2F7FD1; --warn:#B7791F;
+  --shadow:0 10px 30px rgba(20,35,45,.12); --radius:10px;
+  --canvas-bg:#DFE5E9;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+  --font-mono:"IBM Plex Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1318; --panel:#151C23; --panel2:#1B242C; --line:#2A3540; --text:#E4EAEE; --muted:#93A3B0;
+    --accent:#3FB4C8; --accent-ink:#8FDCE8; --accent-soft:#163038; --hot:#F0804A; --cold:#5FA3EE; --warn:#E0A83A;
+    --shadow:0 12px 34px rgba(0,0,0,.45); --canvas-bg:#0B1015;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1318; --panel:#151C23; --panel2:#1B242C; --line:#2A3540; --text:#E4EAEE; --muted:#93A3B0;
+  --accent:#3FB4C8; --accent-ink:#8FDCE8; --accent-soft:#163038; --hot:#F0804A; --cold:#5FA3EE; --warn:#E0A83A;
+  --shadow:0 12px 34px rgba(0,0,0,.45); --canvas-bg:#0B1015;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.45;overflow:hidden}
+button{font-family:inherit;color:inherit}
+#app{display:grid;grid-template-columns:270px 1fr 340px;grid-template-rows:56px 1fr;height:100vh;height:100dvh}
+header{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--line);z-index:5}
+header h1{font-family:var(--font-display);font-weight:700;font-size:24px;letter-spacing:.02em;margin:0;line-height:1;text-transform:uppercase}
+header h1 small{display:block;font-family:var(--font-body);font-weight:500;font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:3px}
+.spec-strip{display:flex;gap:18px;margin-left:auto;font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.spec-strip b{color:var(--text);font-weight:500}
+.spec-strip span{white-space:nowrap}
+#tree{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:12px 10px 60px}
+#inspector{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:16px 18px 40px}
+#stage{position:relative;background:var(--canvas-bg);min-width:0;min-height:0}
+#stage canvas{display:block;width:100%;height:100%;outline:none;cursor:grab}
+#stage canvas:active{cursor:grabbing}
+.eyebrow{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:14px 6px 6px}
+.eyebrow:first-child{margin-top:4px}
+.module{margin-bottom:4px}
+.module>button{width:100%;display:flex;align-items:center;gap:8px;text-align:left;background:none;border:0;padding:7px 6px;border-radius:6px;font-family:var(--font-display);font-size:16px;font-weight:600;letter-spacing:.02em;cursor:pointer}
+.module>button:hover{background:var(--panel2)}
+.module>button .sw{width:10px;height:10px;border-radius:2px;flex:none}
+.module>button .n{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted);font-weight:400}
+.module ul{list-style:none;margin:0;padding:0 0 4px 12px}
+.module li button{width:100%;text-align:left;background:none;border:0;padding:5px 8px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--text);display:flex;gap:8px;align-items:center}
+.module li button:hover{background:var(--panel2)}
+.module li button.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.module li button .dot{width:6px;height:6px;border-radius:50%;background:var(--line);flex:none}
+.module li button.active .dot{background:var(--accent)}
+.module.collapsed ul{display:none}
+.module>button .chev{margin-left:0;font-size:11px;color:var(--muted);transition:transform .15s}
+.module.collapsed>button .chev{transform:rotate(-90deg)}
+/* HUD */
+.hud{position:absolute;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 14px;background:linear-gradient(to top,var(--bg) 0%,transparent 100%);pointer-events:none}
+.hud>*{pointer-events:auto}
+.ctl{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;box-shadow:var(--shadow);font-size:12px}
+.ctl label{color:var(--muted);font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.ctl input[type=range]{width:110px;accent-color:var(--accent)}
+.ctl output{font-family:var(--font-mono);font-size:11px;color:var(--muted);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.tbtn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;box-shadow:var(--shadow);display:inline-flex;gap:6px;align-items:center}
+.tbtn:hover{border-color:var(--accent)}
+.tbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tbtn:focus-visible,.module li button:focus-visible,.viewbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.views{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap}
+.viewbtn{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px;font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;box-shadow:var(--shadow)}
+.viewbtn:hover{border-color:var(--accent)}
+.legend{position:absolute;top:12px;right:12px;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:11px;box-shadow:var(--shadow);display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px}
+.legend .bar{grid-column:1/-1;height:8px;border-radius:4px;background:linear-gradient(90deg,#3B82D8,#7EC8E3,#E8C34A,#F07A2A,#C8322B,#8A8A8A)}
+.legend .bar-lbl{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;font-family:var(--font-mono);font-size:10px;color:var(--muted)}.legend .bar-lbl span{white-space:nowrap}
+#tip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);font-family:var(--font-display);font-size:14px;font-weight:600;letter-spacing:.04em;padding:4px 8px;border-radius:4px;transform:translate(12px,-28px);opacity:0;transition:opacity .1s;white-space:nowrap}
+#hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:5px 12px;box-shadow:var(--shadow);opacity:.95}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:22px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--canvas-bg)}
+/* tour */
+#tour{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:min(620px,calc(100% - 40px));background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:14px 16px;display:none}
+#tour.open{display:block}
+#tour .step{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+#tour h3{margin:2px 0 6px;font-family:var(--font-display);font-size:22px;font-weight:700;line-height:1.1}
+#tour p{margin:0 0 10px;font-size:13px;max-width:62ch}
+#tour .nav{display:flex;gap:8px;align-items:center}
+#tour .nav .prog{flex:1;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+#tour .nav .prog i{display:block;height:100%;background:var(--accent)}
+/* inspector */
+#inspector .mod-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#inspector .mod-tag i{width:10px;height:10px;border-radius:2px;display:inline-block}
+#inspector h2{font-family:var(--font-display);font-weight:700;font-size:28px;line-height:1.05;margin:6px 0 4px;text-wrap:balance}
+#inspector .loc{color:var(--muted);font-size:12px;margin-bottom:12px}
+#inspector h4{font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px;padding-top:12px;border-top:1px solid var(--line)}
+#inspector p{margin:0 0 8px;font-size:13.5px;max-width:60ch}
+#inspector ul{margin:0;padding-left:18px;font-size:13px}
+#inspector li{margin-bottom:4px}
+#inspector .conn button{background:none;border:0;padding:0;color:var(--accent-ink);text-decoration:underline dotted;cursor:pointer;font-size:13px;text-align:left}
+#inspector table{width:100%;border-collapse:collapse;font-size:12.5px}
+#inspector td{padding:4px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+#inspector td:last-child{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;padding-left:10px;max-width:52%}
+#inspector td .tag{display:inline-block;margin-left:6px;font-family:var(--font-display);font-size:10px;letter-spacing:.08em;padding:0 4px;border-radius:3px;border:1px solid var(--line);color:var(--muted);vertical-align:middle}
+#inspector td .tag.t-TCDS{color:var(--accent-ink);border-color:var(--accent)}
+#inspector .srckey{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:var(--muted);margin-top:8px}
+#inspector .note{background:var(--accent-soft);color:var(--accent-ink);border-radius:8px;padding:9px 11px;font-size:13px}
+#inspector .note b{display:block;font-family:var(--font-display);letter-spacing:.1em;text-transform:uppercase;font-size:11px;margin-bottom:3px}
+#inspector .src{font-size:11px;color:var(--muted);margin-top:14px}
+#inspector .actions{display:flex;gap:6px;margin:10px 0 0}
+.overview h2{font-size:26px}
+.overview .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.overview .kv div{background:var(--panel2);border-radius:8px;padding:8px 10px}
+.overview .kv b{display:block;font-family:var(--font-mono);font-size:16px;font-weight:500}
+.overview .kv span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.flow{display:flex;flex-direction:column;gap:0;margin-top:4px}
+.flow div{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:12.5px;padding:3px 0}
+.flow div i{width:14px;height:14px;border-radius:50%;margin-top:3px}
+.mobile-tabs{display:none}
+@media (max-width:1250px){ .spec-strip{display:none} #app{grid-template-columns:230px 1fr 300px} .legend{display:none} }
+@media (max-width:980px){
+  header h1 small{display:none}
+  .hud{display:none}
+  #app.show-hud .hud{display:flex}
+  #hint{display:none}
+  #app{grid-template-columns:1fr;grid-template-rows:56px 1fr auto}
+  #tree,#inspector{display:none;border:0;border-top:1px solid var(--line);max-height:40vh}
+  #app.show-tree #tree{display:block}
+  #app.show-inspector #inspector{display:block}
+  .spec-strip{display:none}
+  .mobile-tabs{display:flex;gap:6px;margin-left:auto}
+  .legend{display:none}
+  #inspector h2{font-size:22px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+
+<div id="app">
+  <header>
+    <h1>PW127N Engine Atlas<small>Pratt &amp; Whitney Canada · ATR 72-600 powerplant · interactive study model</small></h1>
+    <div class="spec-strip">
+      <span>RTO <b>2 750 shp</b></span><span>TO <b>2 475 shp</b></span><span>NP 100 % <b>1 200 rpm</b></span><span>NH 100 % <b>≈33 300 rpm</b></span><span>NL 100 % <b>≈27 700 rpm</b></span><span>ITT max TO <b>800 °C</b></span>
+    </div>
+    <div class="mobile-tabs"><button class="tbtn" id="mTree">Parts</button><button class="tbtn" id="mInsp">Details</button><button class="tbtn" id="mHud">Controls</button></div>
+  </header>
+  <nav id="tree" aria-label="Engine components"></nav>
+  <main id="stage">
+    <div id="loading">Assembling engine…</div>
+    <div class="views">
+      <button class="viewbtn" data-view="iso">Iso</button>
+      <button class="viewbtn" data-view="left">Left</button>
+      <button class="viewbtn" data-view="right">Right</button>
+      <button class="viewbtn" data-view="front">Front</button>
+      <button class="viewbtn" data-view="rear">Rear</button>
+      <button class="viewbtn" data-view="top">Top</button>
+      <button class="viewbtn" data-view="gearbox">Gearbox</button>
+      <button class="viewbtn" data-view="hot">Hot section</button>
+      <button class="viewbtn" id="resetBtn" title="Reset view and all controls">Reset</button>
+    </div>
+    <div id="hint">Drag to orbit · scroll to zoom · right-drag to pan · click a part</div>
+    <div class="legend" id="legend">
+      <i style="background:#B9BEC4"></i><span>Casings (Mg / Al alloy)</span>
+      <i style="background:#C9C2B0"></i><span>Impellers (Ti)</span>
+      <i style="background:#8B6F5A"></i><span>Hot section (Ni alloy)</span>
+      <i style="background:#7D8A96"></i><span>Gears &amp; shafts (steel)</span>
+      <i style="background:#3A424A"></i><span>Accessories</span>
+      <i style="background:#B23B3B"></i><span>Fuel &amp; ignition</span>
+      <div class="bar"></div>
+      <div class="bar-lbl"><span>Inlet</span><span>P3</span><span>Flame</span><span>Exhaust</span></div>
+    </div>
+    <div id="tip"></div>
+    <div id="tour">
+      <div class="step" id="tourStep"></div>
+      <h3 id="tourTitle"></h3>
+      <p id="tourText"></p>
+      <div class="nav">
+        <button class="tbtn" id="tourPrev">‹ Back</button>
+        <div class="prog"><i id="tourProg"></i></div>
+        <button class="tbtn" id="tourNext">Next ›</button>
+        <button class="tbtn" id="tourClose">Close</button>
+      </div>
+    </div>
+    <div class="hud">
+      <div class="ctl"><label for="explode">Explode</label><input id="explode" type="range" min="0" max="1" step="0.01" value="0"><output id="explodeOut">0 %</output></div>
+      <div class="ctl"><label for="xray">Casing opacity</label><input id="xray" type="range" min="0.05" max="1" step="0.01" value="1"><output id="xrayOut">100 %</output></div>
+      <div class="ctl"><label for="cut">Section</label><input id="cut" type="range" min="-0.4" max="0.4" step="0.005" value="0" disabled><output id="cutOut">0 mm</output><button class="tbtn" id="cutBtn">Cutaway</button></div>
+      <button class="tbtn" id="flowBtn">Gas path</button>
+      <button class="tbtn" id="spinBtn">Spin rotors</button>
+      <button class="tbtn" id="labelBtn">Labels</button>
+      <button class="tbtn" id="propBtn">Propeller</button>
+      <button class="tbtn" id="colorBtn">Colour by module</button>
+      <button class="tbtn" id="tourBtn">▶ Gas-path tour</button>
+    </div>
+  </main>
+  <aside id="inspector" aria-live="polite"></aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.152.2/three.min.js"></script>
+<script>
+// ---------- Component knowledge base ----------
+// Sources: EASA TCDS IM.E.041 issue 7 (limits, dimensions, weights), ATR 42/72-600 Systems Guide (FCOM 1.16 / ATA 61-72),
+// P&WC PW100 Engine Maintenance Manual ch. 72-00 Description & Operation (construction), Wikipedia PW100 (family data).
+// "≈" marks values derived or generic to the PW100 family rather than quoted for the PW127N specifically.
+const MODULES = {
+  prop:   {name:"Propeller & reduction gearbox", color:0x4F8FC6},
+  inlet:  {name:"Inlet & structure",              color:0x8FA5B5},
+  comp:   {name:"Compressors (LP · HP)",          color:0xE0B14C},
+  comb:   {name:"Combustion section",             color:0xD4562F},
+  turb:   {name:"Turbines & exhaust",             color:0xB0433C},
+  shaft:  {name:"Shafts & bearings",              color:0x8C8FA6},
+  acc:    {name:"Accessory gearbox & systems",    color:0x5E9B6A},
+  sens:   {name:"Sensors & control",              color:0x9C6BC2}
+};
+const C = {}; // id -> component record
+function def(id, o){ o.id=id; C[id]=o; }
+
+def("prop", {mod:"prop", name:"Hamilton Sundstrand 568F propeller", loc:"Front of the reduction gearbox, on the propeller shaft flange",
+ fn:"Converts shaft power from the power turbine into thrust. Six composite blades, 3.93 m diameter, constant-speed, full-feathering and reversing. Blade angle is set hydraulically by engine oil metered by the Propeller Valve Module and sent through the propeller shaft to the pitch-change piston in the hub.",
+ conn:["propshaft","pvm","osg","feather_pump","prop_brake"],
+ nums:[["Blades","6"],["Diameter","3.93 m"],["NP 100 %","1 200 rpm"],["NP in CLB / CRZ","82 % = 984 rpm"],["NP max (TCDS)","1 212 rpm · 1 296 rpm 20 s"],["Ground NP for ACW","70.8 % min"]],
+ pilot:"In AUTO the PEC holds NP at 100 % (TO/MCT) or 82 % (CLB/CRZ) by changing blade angle. On the ground at low power, below the blade-angle governing range, the EEC holds NP with fuel flow (fuel governing mode). With PEC OFF the overspeed governor caps NP at 102.5 % if power is sufficient."});
+def("propshaft", {mod:"prop", name:"Propeller shaft & flange", loc:"Reduction gearbox front housing, axis offset above the turbomachinery centreline",
+ fn:"Carries the 135-tooth second-stage bull gear and the propeller flange. Supported by three bearings (No. 15 roller, No. 18 ball, No. 19 roller). An oil transfer tube runs down its bore so the PVM can pressurise the pitch-change piston in the propeller hub. A carbon seal under the front cover keeps gearbox oil out of the spinner.",
+ conn:["prop","rgb_stage2","pvm"],
+ nums:[["Bull gear","135 teeth"],["Speed at 100 % NP","1 200 rpm"],["Max transient torque (TCDS)","19 578 N·m"]],
+ pilot:"The offset gearbox is why the propeller centreline sits above the engine axis in the nacelle. The prop shaft line is also where the NP indication is ultimately measured."});
+def("rgb_front", {mod:"prop", name:"Reduction gearbox housings", loc:"Front of the engine, forward of the front inlet case",
+ fn:"Three magnesium-alloy housings (front, rear and input) form the reduction gearbox module. It carries the three main engine mounts (two lateral, one top centre), the torque mounts at 5 and 7 o'clock, the propeller brake pad (left), the feathering pump pad (right), chip detector pads and the RGB data plate. The gearbox and turbomachinery modules bolt together as one rigid unit.",
+ conn:["rgb_stage1","rgb_stage2","propshaft","acw_gen","pvm","osg","feather_pump","prop_brake","np_probe"],
+ nums:[["Reduction ratio","≈ 16.7 : 1 (family 15.4–17.2)"],["Stages","2 (helical, then spur)"],["Engine mounts","3 main + 2 torque"]],
+ pilot:"Every RGB-mounted accessory (ACW generator, PVM, overspeed governor, feathering pump, prop brake) turns with the propeller line, not with the gas generator. That is why ACW power needs NP above 66 % and is lost with the prop feathered or braked."});
+def("rgb_stage1", {mod:"prop", name:"First-stage helical gear set", loc:"RGB input housing, on the engine centreline",
+ fn:"The power-turbine torque shaft ends in a helical input pinion. It meshes with two helical gears on layshafts that split the torque into two parallel paths. Double-helical teeth cancel axial thrust. The input driveshaft runs on bearings No. 8 and 9; the helical gears on No. 11 and 12.",
+ conn:["torque_shaft","rgb_stage2","pt_shaft"],
+ nums:[["Input speed","≈ 20 000 rpm at 100 % NP"],["Bearings","No. 8, 9, 11, 12 (roller)"]],
+ pilot:"The RGB input turns at power-turbine speed: roughly 20 000 rpm feeds in, 1 200 rpm comes out at the propeller."});
+def("rgb_stage2", {mod:"prop", name:"Second-stage spur gears & bull gear", loc:"RGB front housing, around the propeller shaft",
+ fn:"Each layshaft carries a 38-tooth spur pinion. Both pinions drive the single 135-tooth bull gear on the propeller shaft, recombining the split torque. The bull gear also drives the overspeed-governor pad directly and the ACW generator through an idler gearshaft.",
+ conn:["rgb_stage1","propshaft","acw_gen","osg","np_probe"],
+ nums:[["Second-stage ratio","135 / 38 = 3.55 : 1"],["Pinion bearings","No. 13, 14 (roller)"]],
+ pilot:"Metal in the RGB chip detector is a gearbox problem, not an engine core problem. Torque is measured upstream of these gears, so TQ indication is unaffected by the propeller-line accessories."});
+def("torque_shaft", {mod:"prop", name:"Torquemeter torque shaft", loc:"RGB input housing, between the power turbine shaft and the first-stage pinion",
+ fn:"All power reaches the gearbox through a calibrated torque shaft. A concentric, unloaded reference shaft is fixed to its rear end. Under load the torque shaft twists a few degrees relative to the reference shaft; two toothed wheels, one on each shaft, present a phase shift that the torque sensors read. A characterisation plug on the engine harness tells the EEC the calibration of this particular shaft.",
+ conn:["torque_sensors","rgb_stage1","pt_shaft","eec"],
+ nums:[["Measurement","Twist → tooth phase shift"],["Sensors","2, redundant"],["100 % TQ (72-600)","RTO torque at 100 % NP"]],
+ pilot:"TQ % on the EWD comes from here. Power = TQ × NP, so at 82 % NP the same power reads as a higher TQ. ATPCS arms on both TQ > 46 % and triggers on one TQ < 18 % (72-600)."});
+def("torque_sensors", {mod:"sens", name:"Dual torque / NP sensors", loc:"Opposite each other on the RGB input housing",
+ fn:"Two identical tubular magnetic pick-ups. Each counts the passing teeth of the torque-shaft and reference-shaft wheels and sends both signals to the EEC, which converts the phase difference into torque and the tooth rate into power-turbine speed. A platinum resistance element at the tip compensates for shaft temperature.",
+ conn:["torque_shaft","eec","afu"],
+ nums:[["Type","Magnet & coil, dual"],["Outputs","Torque, NPT, temperature"]],
+ pilot:"Loss of one sensor is transparent to the crew. The EEC also uses this torque signal for the torque bug and the AFU uses it to decide when to autofeather."});
+def("pvm", {mod:"prop", name:"Propeller Valve Module (PVM)", loc:"Rear face of the RGB, in line with the propeller shaft",
+ fn:"Electro-hydraulic module commanded by the airframe-mounted PEC (Propeller Electronic Control). It meters high-pressure oil from the propeller pump to increase or decrease blade angle, provides the beta and reverse scheduling from power-lever position, and contains the feather solenoid. Oil goes forward through the propeller-shaft transfer tube to the hub.",
+ conn:["prop","propshaft","osg","feather_pump"],
+ nums:[["Controlled by","PEC (2 channels)"],["Modes","Governing · beta · reverse · feather"],["PEC OFF NP limit","102.5 % (via OSG)"]],
+ pilot:"PEC FAULT means both PEC channels are lost; the PVM then holds the last blade angle demand and the mechanical overspeed governor protects NP. Fire handle and CL to FTR both drive feather through this module."});
+def("osg", {mod:"prop", name:"Propeller HP pump & overspeed governor", loc:"Right pad of the RGB front housing, driven by the bull gear",
+ fn:"A gear pump boosts engine oil to propeller pitch-change pressure. The flyweight overspeed governor on the same pad dumps that pressure to coarsen the blades if NP runs away, independently of the PEC. On the ATR it is also used to cap NP when the PEC is switched off.",
+ conn:["rgb_stage2","pvm","prop"],
+ nums:[["Drive","Bull gear (prop speed)"],["Function","Pitch oil supply + mechanical NP limit"]],
+ pilot:"Purely mechanical backup: works with all electronics dead as long as the gearbox is turning and oil is available."});
+def("feather_pump", {mod:"prop", name:"Auxiliary feathering pump", loc:"Pad on the RGB front housing",
+ fn:"Electrically driven pump that pressurises the pitch-change circuit when the engine-driven propeller pump cannot: feathering after an engine failure or shutdown, unfeathering for a restart, and the ATPCS autofeather sequence. Draws from the gearbox oil supply.",
+ conn:["pvm","prop","afu"],
+ nums:[["Drive","DC electric"],["Used for","Feather / unfeather / autofeather"]],
+ pilot:"Runs automatically during autofeather and when the CL is moved to FTR with the engine stopped. The FEATHER pushbutton on the overhead is an alternative way to feather in an emergency."});
+def("prop_brake", {mod:"prop", name:"Propeller brake (engine 2 only)", loc:"Left pad of the RGB front housing on the right-hand engine",
+ fn:"Hydraulic multi-disc brake pressurised by the blue hydraulic system. It locks the propeller shaft so that engine 2 can run as an on-board APU in hotel mode: the gas generator turns, the AGB drives the DC generator and HP bleed supplies the packs, but the propeller stands still.",
+ conn:["rgb_front","propshaft","starter_gen","bleed_p3"],
+ nums:[["Hydraulic pressure needed",">2 100 psi"],["Time to lock / unlock","10 s / 5 s"],["ITT limit in hotel mode","715 °C"]],
+ pilot:"READY light needs aircraft on ground, gust lock engaged, CL at FTR or FUEL SO, blue pressure available and fire handle in. UNLOCK for more than 15 s is a caution. Starting engine 2 with the brake on requires the gust lock."});
+def("acw_gen", {mod:"acc", name:"ACW generator", loc:"Left pad of the RGB, driven from the bull gear through an idler",
+ fn:"Wild-frequency alternating-current generator (frequency follows NP) supplying the ACW buses: windshield and propeller heating, hydraulic pumps, some avionics. Because it is geared to the propeller line it is only on line when NP is above 66 %.",
+ conn:["rgb_stage2","rgb_front","np_probe"],
+ nums:[["Available above","NP 66 %"],["Ground NP held for ACW","70.8 %"],["Drive","RGB idler gearshaft"]],
+ pilot:"Feathered prop or hotel mode = no ACW from that engine. On ground in fuel-governing mode the EEC keeps NP at 70.8 % precisely so this generator stays on line."});
+def("np_probe", {mod:"sens", name:"NP speed probe", loc:"Left side of the RGB rear housing",
+ fn:"Magnetic pick-up reading the teeth of the RGB idler gearshaft, which turns at a fixed ratio to the propeller. Provides the NP signal to the PEC and indication, independent of the torque-sensor NPT signal.",
+ conn:["rgb_stage2","pvm"],
+ nums:[["Senses","Idler gearshaft teeth"],["Reference","100 % = 1 200 rpm"]],
+ pilot:"Unexpected NP above 86 % with the levers back triggers the NP caution logic on the FWS."});
+
+def("inlet_duct", {mod:"inlet", name:"Nacelle air intake", loc:"Below the spinner, forward-lower nacelle (aircraft structure)",
+ fn:"Ram air enters the scoop under the propeller spinner, turns upward and aft through the plenum and is delivered to the annular inlet of the rear inlet case. The lip and duct are electrically anti-iced. Because the flow turns through nearly 90° before it meets the LP impeller, large ice and debris tend to carry straight on.",
+ conn:["rear_inlet_case","lp_impeller"],
+ nums:[["Air mass flow (family, PW127)","≈ 8.5 kg/s"],["Position","Under the RGB and front inlet case"]],
+ pilot:"Engine anti-icing on the ATR is an airframe system (intake lip, plus the engine's own heated inlet struts). Ice shed from the intake goes into the LP impeller, which is why intake heat comes on early."});
+def("front_inlet_case", {mod:"inlet", name:"Front inlet case", loc:"Immediately aft of the RGB input housing",
+ fn:"Structural magnesium casting joining the RGB to the turbomachinery. Its radial struts are hollow: they carry pressure and scavenge oil to the No. 1 and 2 power-turbine-shaft bearings and are heated by that oil for de-icing. Externally it carries the EEC and autofeather unit on the left, the two ignition exciters on the right, two lifting brackets and the turbomachinery data plate.",
+ conn:["rgb_front","rear_inlet_case","eec","afu","exciters","bearings"],
+ nums:[["Material","Magnesium alloy"],["Carries","EEC · AFU · exciters"]],
+ pilot:"The front and rear inlet cases hold the oil tank and the front bearings, so most of the cold-section oil lines you see on a walk-around start here."});
+def("rear_inlet_case", {mod:"inlet", name:"Rear inlet case & annular inlet", loc:"Between the front inlet case and the LP diffuser case",
+ fn:"Forms the 360° inlet that feeds the LP impeller eye. The oil tank is cast integrally into it, with the filler and sight glass on the outside. It also holds the T1.8 inlet temperature sensor, the two NH speed probes and the front mounting of the accessory drive.",
+ conn:["front_inlet_case","oil_tank","lp_impeller","sensors","inlet_duct"],
+ nums:[["Inlet stations","1.8 (T1.8, P1.8)"],["Integral","Oil tank"]],
+ pilot:"T1.8 and P1.8 measured here are what the EEC uses to compute the rated power and the torque bug for the selected PWR MGT mode."});
+def("oil_tank", {mod:"acc", name:"Integral oil tank", loc:"Cast into the rear inlet case, lower half",
+ fn:"Gravity-fed reservoir for the single engine oil system that lubricates and cools both the turbomachinery and the reduction gearbox bearings and gears. Oil also drives the propeller pitch change and heats the inlet struts. Fitted with filler cap, sight glass, de-aerator return and a pressure-fill connection.",
+ conn:["oil_pumps","rear_inlet_case","fuel_pump_hmu"],
+ nums:[["Normal pressure (EMM)","55–65 psid"],["Oil temp low caution","< 45 °C running, PL > 30°"],["Oil temp high caution","125–140 °C"],["Oil temp warning","> 140 °C"]],
+ pilot:"Check quantity on the sight glass within the after-shutdown window; oil migrates and the reading drifts. Low oil pressure with rising temperature: expect the LO PR warning logic rather than waiting for the temperature limit."});
+def("eec", {mod:"sens", name:"Electronic Engine Control (EEC)", loc:"Left side of the front inlet case",
+ fn:"Single-channel digital control with a hydro-mechanical backup in the HMU. It reads power-lever angle (RVDT), the PWR MGT rating selection, P1.8, T1.8, ambient pressure, NH from the dual probes, and torque and NPT from the torque sensors. From these it computes the rated torque, positions the torque bug, and trims metered fuel by driving the HMU stepper motor. It also commands the intercompressor bleed valve and holds NP with fuel at low power on the ground.",
+ conn:["fuel_pump_hmu","torque_sensors","sensors","ibv","afu"],
+ nums:[["Active above","≈ 30 % NH"],["Supply","28 V DC"],["Rated power source","PWR MGT + PL + T1.8/P1.8"]],
+ pilot:"EEC FAULT flashing: fuel flow is frozen at the last value. Retard the PL into the green sector (below 52°) before deselecting; the light goes steady and the HMU base law takes over. In manual mode the engine no longer protects itself against the torque and ITT limits."});
+def("afu", {mod:"sens", name:"Autofeather unit (AFU / ATPCS)", loc:"Left side of the front inlet case, next to the EEC",
+ fn:"Two circuit boards that implement the engine side of the ATPCS (Automatic Take-off Power Control System). Using the torque signal, it detects a power loss on take-off, commands uptrim of the live engine to RTO, and after a delay energises the feathering circuit of the failed engine.",
+ conn:["torque_sensors","feather_pump","pvm","eec"],
+ nums:[["Arm (72-600)","PWR MGT TO · pb ON · both PL > 49° · both TQ > 46 %"],["Trigger","One TQ < 18 %"],["Autofeather delay","2.15 s after uptrim"]],
+ pilot:"On the ground ARM gives uptrim plus autofeather; armed in flight (go-around) it gives autofeather only. Losing ARM before V1 is a stop item on most operators' SOPs."});
+def("exciters", {mod:"comb", name:"Ignition exciters", loc:"Right side of the front inlet case",
+ fn:"Two independent capacitor-discharge exciters, each converting 28 V DC into pulsed high voltage for one igniter through a braided high-tension lead. Selected by the start rotary selector (A, B or A+B).",
+ conn:["igniters","starter_gen"],
+ nums:[["Units","2"],["Input","28 V DC (works 9–30 V)"],["Selection","A · B · A+B"]],
+ pilot:"In flight both exciters are energised regardless of the selector position. CONT RELIGHT keeps them on for icing or heavy precipitation."});
+
+def("lp_impeller", {mod:"comp", name:"LP compressor impeller", loc:"Inside the LP diffuser case, aft of the annular inlet",
+ fn:"Titanium centrifugal impeller that takes air from the inlet eye and slings it radially outward, raising its pressure and temperature. It is driven by the single-stage LP turbine through the LP shaft, and supported by the No. 3 ball bearing. LP discharge air is station 2.5.",
+ conn:["lp_diffuser","lp_shaft","lp_turbine","bearings","rear_inlet_case"],
+ nums:[["Type","Single centrifugal stage"],["NL 100 %","≈ 27 700 rpm"],["NL max TO / transient (TCDS)","28 870 rpm (104.2 %) · 29 575 rpm"],["Overspeed limit for FWS","NL > 106.8 %"]],
+ pilot:"NL is a free spool: it settles where the LP turbine energy balances the impeller load, so it lags NH on acceleration. A stall or surge shows first as an NL fluctuation with ITT rise."});
+def("lp_diffuser", {mod:"comp", name:"LP diffuser case & diffuser pipes", loc:"Around the LP impeller tip, feeding the intercompressor case",
+ fn:"Curved diffuser pipes collect the high-velocity air leaving the impeller tip, slow it down to recover static pressure, and turn it from radial back to axial and inward so it enters the eye of the HP impeller. The case also carries the LP (P2.5) bleed pad with a Y-adapter and non-return valve for the aircraft.",
+ conn:["lp_impeller","intercompressor_case","bleed_p25"],
+ nums:[["Air station","2.5"],["Max LP bleed (TCDS)","10 % of inlet flow"]],
+ pilot:"P2.5 is the low-pressure bleed source for air conditioning at high power; the HP (P3) valve supplements it at low power."});
+def("bleed_p25", {mod:"acc", name:"LP (P2.5) bleed port", loc:"LP diffuser case, with Y-adapter and non-return valve",
+ fn:"Off-take for low-pressure compressor air to the aircraft pneumatic system. A non-return valve stops P3 air feeding back into the LP stage when the HP valve is open.",
+ conn:["lp_diffuser","bleed_p3"],
+ nums:[["Regulated pack pressure","22 psi NORM · 30 psi HIGH"]],
+ pilot:"The BLEED pushbutton controls both the bleed valve and the HP valve. Both close on overheat, leak, overpressure (> 80 psi), fire handle, uptrim, or prop brake on (left engine only)."});
+def("intercompressor_case", {mod:"comp", name:"Intercompressor case", loc:"Between the LP diffuser case and the gas generator case",
+ fn:"Structural case that receives the LP diffuser pipes and houses the HP impeller inlet, the No. 4 bearing, the tower-shaft bevel gears for the accessory gearbox and the air switching valve that chooses P2.5 or P3 air to pressurise the bearing cavities. The engine's lateral mount pads and the NL probe (under the left pad) are on this case; the intercompressor bleed valve sits on top.",
+ conn:["lp_diffuser","hp_impeller","ibv","tower_shaft","sensors","bearings"],
+ nums:[["Switching valve changeover","40–45 % NH"],["Carries","Mount pads · NL probe · IBV"]],
+ pilot:"The switching valve is why oil-seal pressurisation is marginal during start: below about 45 % NH the seals rely on P2.5, which is still low."});
+def("ibv", {mod:"acc", name:"Intercompressor / handling bleed valve", loc:"Top of the intercompressor case",
+ fn:"Servo-operated valve that dumps P2.5 air overboard at low power and during rapid power-lever movement so the LP impeller stays clear of surge and the engine stays quiet. Scheduled by the EEC as a function of engine speed; per the P&WC manual it is held closed when the fuel control is in manual (EEC off) mode.",
+ conn:["intercompressor_case","eec","lp_impeller"],
+ nums:[["Controlled by","EEC"],["Manual (EEC off) mode","Closed"]],
+ pilot:"In manual mode with the valve closed the LP stage is closer to its surge line, so be gentle with the power lever."});
+def("hp_impeller", {mod:"comp", name:"HP compressor impeller", loc:"Front of the gas generator case, behind the intercompressor case",
+ fn:"Second centrifugal stage, contra-rotating relative to the LP impeller. It is integral with the HP turbine shaft and delivers air to the HP diffuser pipes at compressor-discharge pressure P3. Supported by the No. 4 ball bearing; the HP rotor drives the accessory gearbox through the tower shaft.",
+ conn:["hp_diffuser","hp_shaft","hp_turbine","tower_shaft","bearings"],
+ nums:[["Type","Single centrifugal stage"],["NH 100 %","≈ 33 300 rpm"],["NH max TO / transient (TCDS)","34 360 rpm (103.2 %) · 35 440 rpm"],["Overall pressure ratio (family)","≈ 15.8 : 1"],["Overspeed limit for FWS","NH > 106.4 %"]],
+ pilot:"NH is the gas-generator speed you watch on start: starter cut-out at 45 %, generator on line at 61.5 %, EEC active above about 30 %. Idle is set by NH."});
+def("hp_diffuser", {mod:"comp", name:"HP diffuser pipes", loc:"Radially around the HP impeller inside the gas generator case",
+ fn:"A second ring of curved pipes decelerates the HP impeller discharge and turns it aft into the space between the gas generator case and the combustion liner. This P3 air cools the liner walls, enters the liner through primary and dilution holes, cools the HP turbine vanes, pressurises bearing cavities, feeds the fuel heater and supplies the aircraft HP bleed.",
+ conn:["hp_impeller","gg_case","combustor","bleed_p3","fuel_pump_hmu"],
+ nums:[["Air station","3"],["Max HP bleed (TCDS)","10 % of inlet flow, ≤ 15 kg/min"]],
+ pilot:"P3 is also the pneumatic signal the HMU uses to schedule acceleration fuel: a P3 sense-line leak makes the engine slow to accelerate or hang on start."});
+def("bleed_p3", {mod:"acc", name:"HP (P3) bleed port", loc:"Gas generator case bleed pad",
+ fn:"Off-take for compressor-discharge air to the aircraft HP bleed valve. Used for air conditioning and pressurisation at low power, engine start cross-bleed, and in hotel mode on engine 2.",
+ conn:["hp_diffuser","bleed_p25","prop_brake"],
+ nums:[["Opens (right engine, hotel)","at NH 45 % + 30 s"],["Cross-bleed start","other engine at ~ 38 psi duct"]],
+ pilot:"HP valve opening at low power robs ITT margin; hotel mode is why engine 2 has the 715 °C ITT limit while braked."});
+
+def("gg_case", {mod:"comb", name:"Gas generator case", loc:"Mid-engine, from the HP impeller to the turbine support case",
+ fn:"Pressure vessel around the combustion section. It carries the fuel manifold and 14 nozzle bosses, the two igniter bosses at 5 and 7 o'clock, the P3 bleed pad, spring-loaded fuel drain valves front and rear on the underside, and a lifting bracket at 12 o'clock. The inside surface is bathed in P3 air, so it stays relatively cool despite the flame inside the liner.",
+ conn:["hp_diffuser","combustor","fuel_nozzles","igniters","bleed_p3","turbine_support_case"],
+ nums:[["Nozzle bosses","14"],["Igniter bosses","2 (5 & 7 o'clock)"]],
+ pilot:"Fuel dripping from the drains after a wet-motoring or aborted start is normal; continuing drips after a running engine are not."});
+def("combustor", {mod:"comb", name:"Reverse-flow annular combustion liner", loc:"Inside the gas generator case, wrapped around the HP and LP turbines",
+ fn:"Sheet-nickel-alloy inner and outer liners form an annular flame tube. P3 air flows aft outside the liner, enters through the dome at the rear and burns while flowing forward, then turns through 180° at the front into the HP turbine nozzle guide vanes. Folding the flow this way makes the engine short and keeps the turbines cool inside the annulus. Film-cooling holes keep the liner metal well below flame temperature.",
+ conn:["fuel_nozzles","igniters","hp_turbine","hp_diffuser","gg_case"],
+ nums:[["Type","Annular, reverse flow"],["Flow reversals","2 (into liner, into turbine)"],["Air use","Primary · dilution · film cooling"]],
+ pilot:"The reverse-flow layout is why the hot section is short and the exhaust exits so far forward on the nacelle: the turbines sit inside the combustor, not behind it."});
+def("fuel_nozzles", {mod:"comb", name:"Fuel nozzles & manifold (14)", loc:"Around the rear of the gas generator case, spraying forward into the liner dome",
+ fn:"Fourteen dual-orifice nozzle adapters. The flow divider sends fuel to the primary orifices only during starting, then adds the secondary orifices as pressure rises. Each nozzle has an air shroud fed with P3 air to atomise the fuel and keep the tip free of carbon. Fed by a flexible manifold from the flow divider and dump valve, which drains the manifold into the ejector tank at shutdown.",
+ conn:["fuel_pump_hmu","combustor","gg_case"],
+ nums:[["Nozzles","14, dual orifice"],["Stages","Primary (start) + secondary"],["Shutdown","Dump valve drains manifold"]],
+ pilot:"Uneven nozzle spray patterns show up as an ITT spread between engines at the same TQ, or as a hot start tendency on one engine."});
+def("igniters", {mod:"comb", name:"Spark igniters (2)", loc:"Gas generator case, 5 and 7 o'clock, penetrating the liner dome",
+ fn:"Air-cooled surface-discharge igniters with a central electrode in semi-conducting ceramic. Each is powered by its own exciter. Once light-off has propagated round the annulus the flame is self-sustaining and ignition is switched off at starter cut-out unless continuous relight is selected.",
+ conn:["exciters","combustor","gg_case"],
+ nums:[["Positions","5 and 7 o'clock"],["Selection","A · B · A+B"]],
+ pilot:"Light-off is confirmed by ITT rise; no rise within the start time limit means an aborted start and a dry motoring run before the next attempt."});
+
+def("hp_turbine", {mod:"turb", name:"HP turbine (single stage)", loc:"Directly aft of the HP impeller, inside the combustor annulus",
+ fn:"Single-stage axial turbine on the same shaft as the HP impeller. Its cooled nozzle guide vanes take air through a slot in the top and discharge it from holes in the leading edge; the blades are also air-cooled. It extracts the energy needed to drive the HP impeller and the accessory gearbox.",
+ conn:["hp_shaft","hp_impeller","combustor","lp_turbine","bearings"],
+ nums:[["Stages","1"],["Cooling","P3 air, vanes & blades"],["Bearing","No. 5 (roller)"]],
+ pilot:"This is the hottest metal in the engine and where over-temperature on start does its damage, well upstream of the ITT probes."});
+def("lp_turbine", {mod:"turb", name:"LP turbine (single stage)", loc:"Aft of the HP turbine, on the LP shaft",
+ fn:"Single-stage turbine with single-crystal blades that drives the LP impeller through the LP shaft, which runs inside the HP rotor. It turns opposite to the HP rotor. Supported by the No. 6 roller bearing.",
+ conn:["lp_shaft","lp_impeller","hp_turbine","turbine_support_case","bearings"],
+ nums:[["Stages","1"],["Blades","Single crystal"],["Bearing","No. 6 (roller)"]],
+ pilot:"Because the LP turbine sits downstream of the HP turbine, a hot start over-temps it too even though it is not the first stage."});
+def("turbine_support_case", {mod:"turb", name:"Turbine support case & T6 (ITT) probes", loc:"Between the LP turbine and the first power-turbine stage",
+ fn:"Carries the No. 6 and 7 bearing housing, the interturbine duct and nine immersion thermocouples spaced round the case. The probes are wired in parallel through bus-bars and a trim resistor, so the cockpit ITT is an average interturbine temperature at station 6.",
+ conn:["lp_turbine","power_turbine","sensors","bearings"],
+ nums:[["Thermocouples","9, parallel"],["ITT max TO / MCT (PW127N)","800 °C"],["Normal TO ITT (TCDS)","765 °C"],["Transient 20 s","840 °C"],["Starting 5 s","950 °C"],["Hotel mode (eng 2)","715 °C"]],
+ pilot:"ITT is measured after the LP turbine, so the turbine inlet temperature is far higher than the number you see. The TCDS sets a lower 765 °C normal take-off limit so that an ATPCS uptrim to RTO can still stay inside 800 °C. The EEC protects the T6 limit in EEC mode; in manual mode you are the limiter."});
+def("power_turbine", {mod:"turb", name:"Power turbine (two stages)", loc:"Aft end of the turbomachinery, ahead of the exhaust duct",
+ fn:"Two-stage free turbine with no mechanical link to the gas generator. It extracts the remaining gas energy and drives the propeller through the long power-turbine shaft that runs forward through the LP and HP rotors to the reduction gearbox. Supported by the No. 7 roller bearing at the rear and No. 1 and 2 at the front.",
+ conn:["pt_shaft","turbine_support_case","exhaust","bearings","torque_shaft"],
+ nums:[["Stages","2"],["Speed at 100 % NP","≈ 20 000 rpm"],["Bearings","No. 1, 2, 7"]],
+ pilot:"Free-turbine engine: the propeller can be feathered, braked or windmilling while the gas generator runs normally. That is what makes hotel mode and a rapid restart possible."});
+def("exhaust", {mod:"turb", name:"Exhaust duct", loc:"Rear of the engine; the nacelle exhaust discharges above the wing",
+ fn:"Diffusing duct behind the second power-turbine stage. Remaining gas velocity produces a little residual thrust. On the ATR the nacelle exhaust discharges upward and aft over the top of the nacelle so the hot gas clears the wing and flap.",
+ conn:["power_turbine"],
+ nums:[["Residual thrust","Small; engine rated in shp"]],
+ pilot:"The exhaust sits well forward of the wing trailing edge. A puff of smoke at light-off is normal; visible flame from the exhaust is not."});
+
+def("pt_shaft", {mod:"shaft", name:"Power turbine shaft (inner)", loc:"Engine centreline, from the power turbine forward to the RGB",
+ fn:"Innermost of the three concentric shafts. It passes through the bores of the LP and HP rotors, so the power turbine at the very back can drive the gearbox at the very front. Splined at the front to the torque shaft. Supported by the No. 1 and 2 bearings in the inlet case and No. 7 at the rear.",
+ conn:["power_turbine","torque_shaft","lp_shaft","bearings"],
+ nums:[["Position","Inner shaft"],["Speed","≈ 20 000 rpm at 100 % NP"]],
+ pilot:"Three shafts, three independent speeds: NH, NL and NP. Only NP is geared to anything the pilot controls directly."});
+def("lp_shaft", {mod:"shaft", name:"LP shaft (intermediate)", loc:"Between the LP impeller and the LP turbine",
+ fn:"Connects the LP impeller to the LP turbine. It runs outside the power-turbine shaft and inside the short HP rotor. Supported by No. 3 (ball) at the impeller and No. 6 (roller) at the turbine.",
+ conn:["lp_impeller","lp_turbine","pt_shaft","hp_shaft"],
+ nums:[["Position","Middle shaft"],["Speed","NL, ≈ 27 700 rpm at 100 %"]],
+ pilot:"NL is not controlled directly by anything in the cockpit: it settles where LP turbine energy balances the LP impeller load. An NL/NH relationship that differs from the other engine at the same TQ is an early sign of compressor or bleed trouble."});
+def("hp_shaft", {mod:"shaft", name:"HP rotor (outer shaft)", loc:"HP impeller to HP turbine, the shortest of the three shafts",
+ fn:"The HP impeller and HP turbine are built as one rotor. It is the outermost shaft and the only one that also takes power off to the accessories through the tower-shaft bevel gear. Supported by No. 4 (ball) and No. 5 (roller).",
+ conn:["hp_impeller","hp_turbine","tower_shaft","lp_shaft"],
+ nums:[["Position","Outer shaft"],["Speed","NH, ≈ 33 300 rpm at 100 %"]],
+ pilot:"The starter turns this rotor. Everything on the start sequence, from 10 % cross-start check to 45 % starter cut-out, is NH."});
+def("bearings", {mod:"shaft", name:"Main bearings (No. 1 – 7)", loc:"Along the turbomachinery centreline",
+ fn:"No. 1 (ball) and No. 2 (roller) locate the power-turbine shaft in the inlet cases. No. 3 (ball) supports the LP impeller, No. 4 (ball) the HP impeller, No. 5 (roller) the HP turbine end in the gas generator case, No. 6 (roller) the LP turbine and No. 7 (roller) the rear of the power-turbine shaft. Cavities are pressurised with P2.5/P3 air behind carbon seals and scavenged back to the tank.",
+ conn:["oil_pumps","pt_shaft","lp_shaft","hp_shaft"],
+ nums:[["Count","7 main + gearbox bearings"],["Seal pressurisation","P2.5 below ≈ 45 % NH, then P3"]],
+ pilot:"Oil smell in the cabin after start is most often a rear-bearing seal passing oil while cavity pressure is low; it should clear as NH rises."});
+
+def("agb", {mod:"acc", name:"Accessory gearbox (AGB)", loc:"Underside of the engine, below the intercompressor case",
+ fn:"Gear train driven by the HP rotor through the tower shaft and bevel gears. It drives the DC starter-generator, the HP fuel pump with the hydro-mechanical unit mounted on it, and the oil pressure and scavenge pumps. During start the sequence runs in reverse: the starter-generator drives the AGB, which turns the HP rotor.",
+ conn:["tower_shaft","starter_gen","fuel_pump_hmu","oil_pumps","hp_shaft"],
+ nums:[["Driven by","HP spool (NH)"],["Drives","Starter-gen · fuel pump/HMU · oil pumps"]],
+ pilot:"Everything on the AGB stops with the gas generator; everything on the RGB stops with the propeller. Keep the two lists straight and the electrical and bleed consequences of any failure fall out."});
+def("tower_shaft", {mod:"shaft", name:"Tower shaft & bevel gears", loc:"Inside the intercompressor case, running down to the AGB",
+ fn:"Short radial shaft with bevel gears at each end. It takes drive from the HP rotor at the No. 4 bearing area down to the accessory gearbox, and carries starter torque back up during engine start.",
+ conn:["hp_shaft","agb","starter_gen"],
+ nums:[["Drive","HP rotor ↔ AGB"]],
+ pilot:"A starter that spins but does not turn NH points here or at the AGB."});
+def("starter_gen", {mod:"acc", name:"DC starter-generator", loc:"Forward pad of the accessory gearbox, under the inlet case",
+ fn:"Series-wound machine that motors the HP rotor for start, then switches to generation. Cross-start assistance from the opposite engine's generator is checked at 10 % NH; the starter drops out at 45 % NH and the generator comes on line above 61.5 % NH.",
+ conn:["agb","tower_shaft","exciters"],
+ nums:[["Starter mode","0–45 % NH"],["Generator mode","> 61.5 % NH"],["X START FAIL check","10 % NH"],["Output","28 V DC"]],
+ pilot:"START light on with NH above 45 %, or a GCU failure, means the starter is still engaged: shut down before it overheats. Two NH probes on the rear inlet case read this machine's gearshaft."});
+def("fuel_pump_hmu", {mod:"acc", name:"HP fuel pump, HMU & fuel heater", loc:"Accessory gearbox pad, with the fuel-cooled oil cooler alongside",
+ fn:"A positive-displacement gear pump feeds the hydro-mechanical unit (HMU / MFCU). Inside, the power-lever cam, a flyweight NH governor and P3-referenced bellows meter fuel through the metering valve; an EEC-driven stepper motor bleeds Py pressure to trim the schedule. The condition lever closes the HMU shut-off valve. Fuel first passes the heater, warmed by engine oil in the fuel-cooled oil cooler, and a filter with bypass. Metered fuel goes to the flow divider and the 14 nozzles.",
+ conn:["agb","eec","fuel_nozzles","oil_tank","hp_diffuser"],
+ nums:[["Governing","Flyweight NH + P3 bellows"],["EEC trim","Stepper motor on Py"],["Fuel SO","CL to FUEL SO"]],
+ pilot:"With EEC off the HMU base law meters fuel from PL angle alone: less acceleration protection, no torque or ITT limiting, and the PL green sector becomes the safe range."});
+def("oil_pumps", {mod:"acc", name:"Oil pressure & scavenge pumps", loc:"Inside the accessory gearbox housing, driven through bevel gears",
+ fn:"A spur-gear pressure pump with integral relief valve draws from the tank and delivers through the pressure filter (with bypass) to all bearings, the RGB and the propeller pump. A pressure-regulating valve keeps oil pressure a fixed margin above the No. 3/4 bearing-cavity air pressure. Paired scavenge elements return oil from the RGB, the AGB and the bearing cavities (No. 6/7 through an external tube) via the air-cooled oil cooler back to the tank. Chip detectors sit in the scavenge returns.",
+ conn:["oil_tank","bearings","rgb_front","fuel_pump_hmu"],
+ nums:[["Normal pressure (EMM)","55–65 psid"],["Coolers","Air-cooled (aircraft) + fuel-cooled"],["FCOC valve opens","60–71 °C"]],
+ pilot:"Because pressure is regulated against cavity air pressure, indicated oil pressure is lower at idle than at power. Judge it against the limit for the power set, not a single number."});
+def("sensors", {mod:"sens", name:"Engine speed & temperature sensors", loc:"Distributed around the engine",
+ fn:"NH1 and NH2: magnetic probes on the rear inlet case reading the starter gearshaft. NL: single probe under the left mount pad of the intercompressor case reading lugs on the LP bearing nut. NP: probe on the RGB rear housing. T1.8: resistance sensor in the rear inlet case. T6: nine thermocouples in the turbine support case. Torque and NPT: two sensors on the RGB input housing. P3: pneumatic line to the HMU. Pamb and P1.8: to the EEC.",
+ conn:["eec","turbine_support_case","torque_sensors","np_probe","rear_inlet_case","intercompressor_case"],
+ nums:[["NH probes","2"],["NL probes","1"],["T6 thermocouples","9"],["Torque sensors","2"]],
+ pilot:"Speeds are shown as % of the 100 % references (NH ≈ 33 300, NL ≈ 27 700, NP 1 200 rpm). A single-probe NL signal is why an NL indication failure blanks rather than reverts."});
+
+// ---------- Gas-path tour ----------
+const TOUR = [
+ {id:"inlet_duct", t:"1 · Intake", txt:"Air enters the scoop under the spinner and turns up and aft through the plenum. Station 1.8 sensors at the annular inlet give the EEC the temperature and pressure it needs to compute rated power."},
+ {id:"lp_impeller", t:"2 · LP compressor", txt:"The first centrifugal impeller (NL, ≈ 27 700 rpm at 100 %) raises the pressure and slings the air outward into the LP diffuser pipes. This is a free spool, driven only by its own turbine."},
+ {id:"lp_diffuser", t:"3 · LP diffuser pipes", txt:"Curved pipes recover static pressure and turn the flow back inward to the eye of the HP impeller. P2.5 bleed for the cabin is taken here."},
+ {id:"ibv", t:"4 · Handling bleed valve", txt:"At low power and during rapid power-lever movement the EEC opens this valve to dump some P2.5 air overboard, keeping the LP impeller clear of surge. It is closed in manual (EEC off) mode, so handle the power lever gently then."},
+ {id:"hp_impeller", t:"5 · HP compressor", txt:"The second impeller (NH, ≈ 33 300 rpm at 100 %) turns the opposite way and finishes compression to roughly 15.8 times ambient. This rotor also drives the accessory gearbox, so its speed is what the starter turns."},
+ {id:"hp_diffuser", t:"6 · HP diffuser · P3", txt:"P3 air flows aft between the gas generator case and the liner. Part of it cools the liner and turbine vanes, part pressurises the bearing seals, part goes to the HP bleed pad and to the HMU as a control pressure."},
+ {id:"combustor", t:"7 · Reverse-flow combustor", txt:"The air enters the liner at the rear dome, where the 14 nozzles spray fuel forward and the two igniters light it. Combustion happens while flowing forward, then the gas turns 180° into the turbines sitting inside the annulus."},
+ {id:"hp_turbine", t:"8 · HP turbine", txt:"The hottest stage. Air-cooled vanes and blades extract just enough energy to drive the HP impeller and the accessories. Everything downstream is what is left for the LP and power turbines."},
+ {id:"lp_turbine", t:"9 · LP turbine", txt:"A single stage with single-crystal blades drives the LP impeller through the middle shaft, turning opposite to the HP rotor."},
+ {id:"turbine_support_case", t:"10 · ITT measurement (T6)", txt:"Nine thermocouples between the LP turbine and the power turbine give the interturbine temperature you see as ITT. Limits: 800 °C take-off and MCT, 840 °C for 20 s, 950 °C for 5 s on start."},
+ {id:"power_turbine", t:"11 · Power turbine", txt:"Two free stages take the remaining energy and drive the innermost shaft forward through the whole engine to the gearbox, at roughly 20 000 rpm for 100 % NP."},
+ {id:"exhaust", t:"12 · Exhaust", txt:"After the second power-turbine stage the gas leaves through the diffusing exhaust duct and up over the nacelle. Residual thrust is small; nearly all the energy has gone into the shaft. The gas path ends here; the tour now follows the power."},
+ {id:"pt_shaft", t:"13 · Power turbine shaft", txt:"The innermost shaft carries the power turbine's torque forward through the bores of the LP and HP rotors. Three shafts, three independent speeds: NH, NL and NP."},
+ {id:"torque_shaft", t:"14 · Torquemeter", txt:"All propeller power passes through a calibrated torque shaft in the RGB input housing. Its twist, read by two sensors, is the TQ % on the engine display and the signal that arms and triggers ATPCS."},
+ {id:"rgb_stage1", t:"15 · Reduction gearbox, first stage", txt:"A helical input pinion on the torque shaft drives two helical gears, splitting the torque into two parallel paths."},
+ {id:"rgb_stage2", t:"16 · Reduction gearbox, second stage", txt:"Two 38-tooth pinions recombine the torque on the 135-tooth bull gear on the propeller shaft. Overall reduction is about 16.7:1, so 1 200 rpm reaches the propeller. The ACW generator, overspeed governor and NP probe are driven from this gear."},
+ {id:"prop", t:"17 · Propeller", txt:"The 568F converts torque into thrust at a blade angle set by the PVM under PEC control. Pitch oil comes from the propeller pump and travels up the propeller shaft bore. The feathering pump and prop brake also live on this side of the gearbox."}
+];
+// mirror connections so every link can be followed both ways
+Object.values(C).forEach(c=>c.conn.forEach(k=>{ if(C[k] && !C[k].conn.includes(c.id)) C[k].conn.push(c.id); }));
+// source tag per key-figure row. TCDS = EASA type certificate data sheet; ATR = ATR 42/72-600 systems guide / FCOM; EMM = P&WC maintenance manual; ~ = derived or family value
+const SRC = {"propshaft|Speed at 100 % NP":"ATR","prop|Blades":"ATR","prop|Diameter":"ATR","NP 100 %":"ATR","NP in CLB / CRZ":"ATR","NP max (TCDS)":"TCDS","Ground NP for ACW":"ATR","Bull gear":"EMM","Speed at 100 % NP":"~","Max transient torque (TCDS)":"TCDS","Reduction ratio":"~","Stages":"EMM","Engine mounts":"EMM","Input speed":"~","Bearings":"EMM","Second-stage ratio":"EMM","Pinion bearings":"EMM","Measurement":"EMM","Sensors":"EMM","100 % TQ (72-600)":"ATR","Type":"EMM","Outputs":"EMM","pvm|Controlled by":"ATR","ibv|Controlled by":"EMM","Modes":"EMM","PEC OFF NP limit":"ATR","Drive":"EMM","feather_pump|Drive":"ATR","Function":"EMM","Used for":"ATR","Hydraulic pressure needed":"ATR","Time to lock / unlock":"ATR","ITT limit in hotel mode":"ATR","Available above":"ATR","Ground NP held for ACW":"ATR","Senses":"EMM","Reference":"ATR","Air mass flow (family, PW127)":"~","Position":"EMM","Material":"EMM","Carries":"EMM","Inlet stations":"EMM","Integral":"EMM","Normal pressure (EMM)":"EMM","Oil temp low caution":"ATR","Oil temp high caution":"ATR","Oil temp warning":"ATR","Active above":"EMM","Supply":"EMM","Rated power source":"EMM","Arm (72-600)":"ATR","Trigger":"ATR","Autofeather delay":"ATR","Units":"EMM","Input":"EMM","Selection":"ATR","NL 100 %":"~","NL max TO / transient (TCDS)":"TCDS","Overspeed limit for FWS":"ATR","Air station":"EMM","Max LP bleed (TCDS)":"TCDS","Regulated pack pressure":"ATR","Switching valve changeover":"EMM","Manual (EEC off) mode":"EMM","NH 100 %":"~","NH max TO / transient (TCDS)":"TCDS","Overall pressure ratio (family)":"~","Max HP bleed (TCDS)":"TCDS","Opens (right engine, hotel)":"ATR","Cross-bleed start":"ATR","Nozzle bosses":"EMM","Igniter bosses":"EMM","Flow reversals":"EMM","Air use":"EMM","Nozzles":"EMM","Shutdown":"EMM","Positions":"EMM","Cooling":"EMM","Bearing":"EMM","Blades":"EMM","Thermocouples":"EMM","ITT max TO / MCT (PW127N)":"TCDS","Normal TO ITT (TCDS)":"TCDS","Transient 20 s":"TCDS","Starting 5 s":"TCDS","Hotel mode (eng 2)":"ATR","Residual thrust":"~","Speed":"~","Count":"EMM","Seal pressurisation":"EMM","Driven by":"ATR","Drives":"ATR","Starter mode":"ATR","Generator mode":"ATR","X START FAIL check":"ATR","Output":"EMM","Governing":"EMM","EEC trim":"EMM","Fuel SO":"ATR","Coolers":"EMM","FCOC valve opens":"EMM","NH probes":"EMM","NL probes":"EMM","T6 thermocouples":"EMM","Torque sensors":"EMM"};
+function srcOf(id,label){ return SRC[id+"|"+label] || SRC[label] || ""; }
+
+</script>
+<script>
+(function(){
+"use strict";
+const stage = document.getElementById('stage');
+const V3 = (x,y,z)=>new THREE.Vector3(x,y,z);
+const TAU = Math.PI*2;
+
+// ---------- Renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace; else renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+if ('useLegacyLights' in renderer) renderer.useLegacyLights = false;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+stage.insertBefore(renderer.domElement, stage.firstChild);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.02, 60);
+
+// environment (studio softbox)
+const pm = new THREE.PMREMGenerator(renderer);
+{
+  const es = new THREE.Scene();
+  es.add(new THREE.Mesh(new THREE.SphereGeometry(20,16,8), new THREE.MeshBasicMaterial({color:0x2A3138, side:THREE.BackSide})));
+  const add=(w,h,x,y,z,c,i)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color:new THREE.Color(c).multiplyScalar(i), side:THREE.DoubleSide})); m.position.set(x,y,z); m.lookAt(0,0,0); es.add(m);};
+  add(10,6, 0,9,-2, 0xFFF4E6, 6);  add(6,10,-9,3,4, 0xDCE9F5, 3.5); add(6,10,9,2,-4, 0xFFFFFF, 2.5); add(12,3, 0,-8,0, 0x9AA4AE, 1.2); add(5,5,2,4,9,0xFFFFFF,2);
+  scene.environment = pm.fromScene(es, 0.03).texture;
+}
+scene.add(new THREE.HemisphereLight(0xdfe8f0, 0x3a3f44, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 2.6); key.position.set(-2.5,4,-3); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048); key.shadow.bias=-0.0004; key.shadow.normalBias=0.01;
+const sc = key.shadow.camera; sc.near=0.5; sc.far=14; sc.left=-3; sc.right=3; sc.top=3; sc.bottom=-3; scene.add(key);
+const fill = new THREE.DirectionalLight(0xcfe3ff, 0.8); fill.position.set(3,1.5,3); scene.add(fill);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(4,64), new THREE.ShadowMaterial({opacity:0.13})); floor.rotation.x=-Math.PI/2; floor.position.y=-0.78; floor.receiveShadow=true; scene.add(floor);
+const grid = new THREE.GridHelper(8, 32, 0x000000, 0x000000); grid.position.y=-0.779; grid.material.transparent=true; grid.material.opacity=0.07; scene.add(grid);
+
+function applyTheme(){
+  const cs = getComputedStyle(document.documentElement);
+  const bg = cs.getPropertyValue('--canvas-bg').trim() || '#DFE5E9';
+  scene.background = new THREE.Color(bg);
+  const dark = new THREE.Color(bg).getHSL({}).l < 0.5;
+  grid.material.color.set(dark?0xffffff:0x000000); grid.material.opacity = dark?0.05:0.07;
+  floor.material.opacity = dark?0.3:0.13;
+}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- Orbit controls (custom, no addon) ----------
+const ctl = {target:V3(0.8,0.05,0), theta:-2.35, phi:1.15, dist:3.4, minD:0.35, maxD:9};
+const ctlGoal = {target:ctl.target.clone(), theta:ctl.theta, phi:ctl.phi, dist:ctl.dist, t:1};
+function applyCam(){
+  const sp = Math.sin(ctl.phi);
+  camera.position.set(ctl.target.x + ctl.dist*sp*Math.cos(ctl.theta), ctl.target.y + ctl.dist*Math.cos(ctl.phi), ctl.target.z + ctl.dist*sp*Math.sin(ctl.theta));
+  camera.lookAt(ctl.target);
+}
+function flyTo(o, ms=700){
+  ctlGoal.from = {target:ctl.target.clone(), theta:ctl.theta, phi:ctl.phi, dist:ctl.dist};
+  Object.assign(ctlGoal, {target:o.target?o.target.clone():ctl.target.clone(), theta:o.theta??ctl.theta, phi:o.phi??ctl.phi, dist:o.dist??ctl.dist, t:0, ms});
+}
+function stepCam(dt){
+  if (ctlGoal.t>=1) return;
+  ctlGoal.t = Math.min(1, ctlGoal.t + dt*1000/ctlGoal.ms);
+  const k = 1-Math.pow(1-ctlGoal.t,3), f=ctlGoal.from;
+  ctl.target.lerpVectors(f.target, ctlGoal.target, k);
+  let dth = ctlGoal.theta - f.theta; dth = Math.atan2(Math.sin(dth), Math.cos(dth));
+  ctl.theta = f.theta + dth*k; ctl.phi = f.phi + (ctlGoal.phi-f.phi)*k; ctl.dist = f.dist + (ctlGoal.dist-f.dist)*k;
+}
+const el = renderer.domElement;
+let drag=null, moved=0;
+el.addEventListener('contextmenu', e=>e.preventDefault());
+el.addEventListener('pointerdown', e=>{ el.setPointerCapture(e.pointerId); drag={x:e.clientX,y:e.clientY,b:e.button,shift:e.shiftKey}; moved=0; ctlGoal.t=1; });
+el.addEventListener('pointermove', e=>{
+  if(!drag){ hover(e); return; }
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag.x=e.clientX; drag.y=e.clientY; moved+=Math.abs(dx)+Math.abs(dy);
+  if (drag.b===2 || drag.shift){ // pan
+    const s = ctl.dist*0.0016; const right = V3().setFromMatrixColumn(camera.matrix,0), up = V3().setFromMatrixColumn(camera.matrix,1);
+    ctl.target.addScaledVector(right,-dx*s).addScaledVector(up,dy*s);
+  } else { ctl.theta += dx*0.006; ctl.phi = Math.max(0.08, Math.min(Math.PI-0.08, ctl.phi - dy*0.006)); }
+});
+el.addEventListener('pointerup', e=>{ if(drag && moved<6 && drag.b===0) pick(e); drag=null; });
+el.addEventListener('pointercancel', ()=>drag=null);
+el.addEventListener('wheel', e=>{ e.preventDefault(); ctlGoal.t=1; ctl.dist = Math.max(ctl.minD, Math.min(ctl.maxD, ctl.dist*Math.exp(e.deltaY*0.0012))); }, {passive:false});
+// pinch
+let pinch=null;
+el.addEventListener('touchstart', e=>{ if(e.touches.length===2){ pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); drag=null; } }, {passive:true});
+el.addEventListener('touchmove', e=>{ if(pinch && e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); ctl.dist=Math.max(ctl.minD,Math.min(ctl.maxD, ctl.dist*pinch/d)); pinch=d; } }, {passive:true});
+el.addEventListener('touchend', ()=>pinch=null);
+
+// ---------- Materials ----------
+const BASE = {
+  case:  {color:0xB9BEC4, metalness:0.55, roughness:0.42},
+  caseD: {color:0x9E9A94, metalness:0.6,  roughness:0.5},
+  ti:    {color:0xCFC7B4, metalness:0.85, roughness:0.28},
+  hot:   {color:0x8B6F5A, metalness:0.7,  roughness:0.42},
+  hotD:  {color:0x5E4A3E, metalness:0.65, roughness:0.5},
+  steel: {color:0x8E98A3, metalness:0.9,  roughness:0.28},
+  acc:   {color:0x3A424A, metalness:0.45, roughness:0.6},
+  fuel:  {color:0xB23B3B, metalness:0.35, roughness:0.5},
+  rubber:{color:0x22262A, metalness:0.1,  roughness:0.9},
+  blade: {color:0x2E3338, metalness:0.2,  roughness:0.55},
+  glass: {color:0x9FC4D8, metalness:0.1,  roughness:0.15, transparent:true, opacity:0.32},
+  copper:{color:0xB07A4A, metalness:0.85, roughness:0.35}
+};
+let linerTex;
+{ const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,256,256); g.fillStyle='#8a8a8a';
+  for(let y=8;y<256;y+=16) for(let x=(y/16%2)*8+4;x<256;x+=16){ g.beginPath(); g.arc(x,y,2.2,0,TAU); g.fill(); }
+  linerTex = new THREE.CanvasTexture(c); linerTex.wrapS=linerTex.wrapT=THREE.RepeatWrapping; linerTex.repeat.set(6,2); if('colorSpace' in linerTex) linerTex.colorSpace=THREE.SRGBColorSpace; }
+const allMats = [];
+const parts = {};   // id -> {group, meshes, mats, base, dir}
+let current = null; // part being built
+function M(kind){ // per-part material clone
+  const key = kind; if (current.mats[key]) return current.mats[key];
+  const o = Object.assign({side:THREE.DoubleSide}, BASE[kind]); if (kind==='hot'||kind==='hotD') o.map = linerTex;
+  const m = new THREE.MeshStandardMaterial(o); m.userData.orig = m.color.clone(); m.userData.kind=kind; m.userData.origOpacity = m.opacity; m.userData.origTransparent = m.transparent;
+  current.mats[key]=m; allMats.push(m); return m;
+}
+function part(id, dir, build){
+  const g = new THREE.Group(); g.name=id; current = {id, group:g, meshes:[], mats:{}, base:V3(), dir:V3(...dir), rotors:[]};
+  parts[id]=current; build(g); scene.add(g);
+  g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; o.userData.part=id; current.meshes.push(o);} });
+  current=null; return g;
+}
+// ---------- Geometry helpers (engine axis = +x, aft) ----------
+function mesh(geo, mat, x=0,y=0,z=0){ const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); return m; }
+function cylX(rA, rB, len, mat, x, y=0, z=0, seg=48, open=false){ // rA at -x end, rB at +x end
+  const m = mesh(new THREE.CylinderGeometry(rB, rA, len, seg, 1, open), mat, x, y, z); m.rotation.z=-Math.PI/2; return m; }
+function tubeX(rOut, rIn, len, mat, x, y=0, z=0, seg=48){ // hollow tube via lathe
+  const pts=[new THREE.Vector2(rIn,-len/2), new THREE.Vector2(rOut,-len/2), new THREE.Vector2(rOut,len/2), new THREE.Vector2(rIn,len/2), new THREE.Vector2(rIn,-len/2)];
+  const m = mesh(new THREE.LatheGeometry(pts, seg), mat, x, y, z); m.rotation.z=-Math.PI/2; return m; }
+function latheX(profile, mat, x=0, y=0, z=0, seg=64){ // profile: [[x, r],...] in engine coords, x relative to given x
+  const pts = profile.map(p=>new THREE.Vector2(p[1], p[0])); const m = mesh(new THREE.LatheGeometry(pts, seg), mat, x, y, z); m.rotation.z=-Math.PI/2; return m; }
+function box(w,h,d, mat, x,y,z){ return mesh(new THREE.BoxGeometry(w,h,d), mat, x,y,z); }
+function torusX(R, r, mat, x, y=0, z=0, seg=64){ const m=mesh(new THREE.TorusGeometry(R,r,16,seg), mat, x,y,z); m.rotation.y=Math.PI/2; return m; }
+function radial(m, x, theta, axisY=0, axisZ=0){ // place mesh whose local +y is radial, at angle theta from 12 o'clock
+  const p=new THREE.Group(); p.position.set(x,axisY,axisZ); p.rotation.x=theta; p.add(m); return p; }
+function boltRing(R, n, mat, x, r=0.008, y=0, z=0){ const g=new THREE.Group(); for(let i=0;i<n;i++){ const b=cylX(r,r,0.012,mat,0); b.position.set(x, y+R*Math.cos(i/n*TAU), z+R*Math.sin(i/n*TAU)); g.add(b);} return g; }
+function gear(r, w, teeth, mat, helix=0, bore=0){ // spur/helical gear, axis x
+  const g=new THREE.Group(); g.add(bore? tubeX(r-0.006, bore, w, mat, 0): cylX(r-0.006, r-0.006, w, mat, 0));
+  const th = Math.max(0.006, TAU*r/teeth*0.48); const tg=new THREE.BoxGeometry(w, 0.014, th);
+  for(let i=0;i<teeth;i++){ const t=new THREE.Mesh(tg, mat); const a=i/teeth*TAU; t.position.set(0, (r-0.001)*Math.cos(a), (r-0.001)*Math.sin(a)); t.rotation.x=a; t.rotation.y=helix; g.add(t);} return g; }
+function impeller(eye, tip, len, n, mat, mat2){ // centrifugal impeller: hub lathe + curved blades, inlet at -x, discharge radial at +x end
+  const g=new THREE.Group();
+  const prof=[]; for(let i=0;i<=10;i++){ const s=i/10; prof.push([ -len/2 + len*s, 0.02 + (tip-0.02)*Math.pow(s,2.2)*0.98 ]); } prof.push([len/2, tip]); prof.push([len/2, 0.03]); prof.push([-len/2, 0.03]);
+  g.add(latheX(prof, mat, 0));
+  // blades: strip between hub curve and outer curve, swept back
+  const seg=14, pos=[], idx=[];
+  for(let b=0;b<n;b++){ const a0=b/n*TAU; const base=pos.length/3;
+    for(let i=0;i<=seg;i++){ const s=i/seg; const x=-len/2+len*s; const rh=0.02+(tip-0.02)*Math.pow(s,2.2)*0.98+0.002; const ro=Math.min(tip, eye+(tip-eye)*Math.pow(s,0.55)+0.004); const a=a0 - s*0.9;
+      pos.push(x, rh*Math.cos(a), rh*Math.sin(a), x - (1-s)*0.02, ro*Math.cos(a), ro*Math.sin(a)); }
+    for(let i=0;i<seg;i++){ const k=base+i*2; idx.push(k,k+1,k+2, k+1,k+3,k+2); } }
+  const bg=new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); bg.setIndex(idx); bg.computeVertexNormals();
+  g.add(new THREE.Mesh(bg, mat2||mat)); return g; }
+function turbineDisc(rHub, rTip, w, n, mat, matB, twist=0.5){ const g=new THREE.Group(); g.add(cylX(rHub, rHub, w, mat, 0)); g.add(cylX(0.5*rHub,0.5*rHub,w*1.6,mat,0));
+  const bg=new THREE.BoxGeometry(w*0.9, rTip-rHub, Math.max(0.004, TAU*rHub/n*0.3));
+  for(let i=0;i<n;i++){ const b=new THREE.Mesh(bg, matB||mat); const a=i/n*TAU; const rr=(rHub+rTip)/2; b.position.set(0, rr*Math.cos(a), rr*Math.sin(a)); b.rotation.x=a; b.rotation.y=twist; g.add(b);} return g; }
+function vaneRing(rIn, rOut, w, n, mat, twist=-0.5){ const g=new THREE.Group(); g.add(tubeX(rOut+0.012, rOut, w, mat, 0)); g.add(tubeX(rIn, rIn-0.01, w, mat, 0));
+  const bg=new THREE.BoxGeometry(w*0.9, rOut-rIn, 0.005);
+  for(let i=0;i<n;i++){ const b=new THREE.Mesh(bg, mat); const a=i/n*TAU; const rr=(rIn+rOut)/2; b.position.set(0, rr*Math.cos(a), rr*Math.sin(a)); b.rotation.x=a; b.rotation.y=twist; g.add(b);} return g; }
+function pipe(points, r, mat, seg=32){ const c=new THREE.CatmullRomCurve3(points.map(p=>V3(...p))); return new THREE.Mesh(new THREE.TubeGeometry(c, seg, r, 12, false), mat); }
+function pipesRing(n, profile, r, mat, swirl=0.35){ // profile: [[x, rad],...] rotated round axis; swirl adds tangential offset
+  const g=new THREE.Group(); for(let i=0;i<n;i++){ const a0=i/n*TAU; const pts=profile.map((p,k)=>{ const a=a0 + swirl*k/(profile.length-1); return [p[0], p[1]*Math.cos(a), p[1]*Math.sin(a)]; }); g.add(pipe(pts, r, mat)); } return g; }
+function blade(span, cRoot, cTip, tRoot, tTip, thick, mat){ // twisted flat blade along local +y
+  const N=12, pos=[], idx=[]; const layers=[thick/2,-thick/2];
+  layers.forEach((off,L)=>{ const base=pos.length/3; for(let i=0;i<=N;i++){ const s=i/N; const y=span*s; const c=cRoot+(cTip-cRoot)*s; const t=tRoot+(tTip-tRoot)*s; const cx=Math.cos(t), sx=Math.sin(t);
+      const le=[-c/2, off], te=[c/2, off*0.3]; // (chordwise, thickness) in blade section plane: chord along local x, thickness along local z
+      [le,te].forEach(q=>{ const cz=Math.sin(s*Math.PI)*0.04; pos.push(q[0]*cx - (q[1]+cz)*sx, y, q[0]*sx + (q[1]+cz)*cx); }); }
+    for(let i=0;i<N;i++){ const k=base+i*2; if(L===0) idx.push(k,k+2,k+1, k+1,k+2,k+3); else idx.push(k,k+1,k+2, k+1,k+3,k+2); } });
+  const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals(); return new THREE.Mesh(g, mat); }
+
+// ---------- Rotor registry (for spin) ----------
+const rotors = {hp:[], lp:[], pt:[], lay:[], prop:[]};
+function rotor(kind, obj){ rotors[kind].push(obj); return obj; }
+const PY = 0.36; // propeller axis height above turbomachinery axis
+const casingMeshes = [];
+function casing(m){ m.traverse(o=>{ if(o.isMesh){ o.userData.casing=true; casingMeshes.push(o);} }); return m; }
+
+// =========================================================
+//                     BUILD THE ENGINE
+// =========================================================
+// --- Propeller ---
+part('prop', [-0.9,0,0], g=>{
+  const hub = new THREE.Group(); hub.position.set(-0.30, PY, 0);
+  hub.add(latheX([[-0.34,0.0],[-0.30,0.07],[-0.2,0.13],[-0.08,0.165],[0.02,0.175],[0.08,0.17],[0.08,0.0]], M('case'), 0));
+  hub.add(cylX(0.16,0.16,0.09, M('acc'), 0.1));
+  for(let i=0;i<6;i++){ const b=blade(1.78, 0.30, 0.16, 0.55, 0.12, 0.03, M('blade')); const p=new THREE.Group(); p.rotation.x=i/6*TAU; b.position.y=0.17; p.add(b); const root=cylX(0.05,0.05,0.09,M('steel'),0); root.rotation.set(0,0,0); root.position.y=0.19; p.add(root); hub.add(p); }
+  rotor('prop', hub); g.add(hub);
+});
+part('propshaft', [-0.5,0.35,0], g=>{
+  const s=new THREE.Group(); s.position.y=PY;
+  s.add(rotor('prop', cylX(0.055,0.055,0.5, M('steel'), -0.05)));
+  s.add(rotor('prop', cylX(0.10,0.10,0.04, M('steel'), -0.22))); s.add(boltRing(0.08,8,M('steel'),-0.242));
+  s.add(rotor('prop', cylX(0.02,0.02,0.5, M('copper'), 0.0))); // oil transfer tube
+  g.add(s);
+});
+part('rgb_front', [-0.55,0,0], g=>{
+  const m=M('case');
+  const front = latheX([[-0.21,0.10],[-0.20,0.26],[-0.14,0.30],[0.02,0.31],[0.04,0.42],[0.10,0.46],[0.24,0.47],[0.26,0.42],[0.26,0.0]], m, 0, PY, 0); casing(front); g.add(front);
+  const inp = latheX([[0.04,0.0],[0.04,0.21],[0.26,0.22],[0.27,0.16],[0.27,0.0]], m, 0); casing(inp); g.add(inp);   // input housing round the torque shaft
+  const web = box(0.22,0.30,0.30,m,0.15,0.12,0); casing(web); g.add(web);                                     // web joining the two housings
+  g.add(torusX(0.27,0.012,m,-0.17,PY)); g.add(torusX(0.315,0.012,m,0.03,PY)); g.add(boltRing(0.245,20,M('steel'),-0.215,0.007,PY)); g.add(boltRing(0.30,24,M('steel'),0.03,0.007,PY));
+  // engine mounts: two lateral + top, torque mounts at 5 & 7 o'clock
+  [[0.15,0.28,0.49],[0.15,0.28,-0.49],[0.15,0.86,0]].forEach(p=>{ g.add(box(0.12,0.06,0.10,M('acc'),p[0],p[1],p[2])); });
+  [[-0.1,-0.20,0.17],[-0.1,-0.20,-0.17]].forEach(p=>g.add(box(0.08,0.05,0.06,M('acc'),p[0],p[1],p[2])));
+  g.add(box(0.06,0.02,0.03,M('rubber'),-0.15,0.63,0)); // lifting brackets
+});
+part('rgb_stage1', [-0.3,-0.3,0], g=>{
+  g.add(rotor('pt', gear(0.045,0.05,19,M('steel'),0.3)).translateX(0.12));
+  [[0.184,0.178],[0.184,-0.178]].forEach(p=>{ const hg=gear(0.211,0.05,89,M('steel'),-0.3); hg.position.set(0.12,p[0],p[1]); rotor('lay',hg); g.add(hg);
+    const sh=cylX(0.025,0.025,0.26,M('steel'),0.0,p[0],p[1]); rotor('lay',sh); g.add(sh); });
+});
+part('rgb_stage2', [-0.45,0.4,0], g=>{
+  [[0.184,0.178],[0.184,-0.178]].forEach(p=>{ const pg=gear(0.055,0.06,38,M('steel')); pg.position.set(-0.03,p[0],p[1]); rotor('lay',pg); g.add(pg); });
+  const bull=gear(0.195,0.07,135,M('steel'),0,0.06); bull.position.set(-0.03,PY,0); rotor('prop',bull); g.add(bull);
+  const idler=gear(0.06,0.04,24,M('steel')); idler.position.set(-0.03,0.30,0.33); rotor('lay',idler); g.add(idler); // idler for ACW / NP
+});
+part('torque_shaft', [-0.2,-0.5,0], g=>{
+  g.add(rotor('pt', cylX(0.028,0.028,0.22, M('steel'), 0.21)));
+  g.add(rotor('pt', tubeX(0.04,0.033,0.16,M('copper'),0.24)));  // reference shaft
+  g.add(rotor('pt', gear(0.06,0.012,30,M('steel'))).translateX(0.165)); g.add(rotor('pt', gear(0.06,0.012,30,M('copper'))).translateX(0.185));
+});
+part('torque_sensors', [-0.2,-0.65,0], g=>{
+  [Math.PI/2, -Math.PI/2].forEach(a=>{ const s=new THREE.Group(); s.add(mesh(new THREE.CylinderGeometry(0.014,0.014,0.13,16),M('acc'),0,0.16,0)); s.add(mesh(new THREE.CylinderGeometry(0.02,0.02,0.03,16),M('rubber'),0,0.235,0)); g.add(radial(s,0.175,a)); });
+});
+part('pvm', [-0.3,0.65,0], g=>{ g.add(box(0.16,0.13,0.13,M('acc'),0.34,PY+0.05,0)); g.add(cylX(0.05,0.05,0.1,M('acc'),0.28,PY+0.05,0)); g.add(box(0.06,0.04,0.09,M('rubber'),0.36,PY+0.13,0)); g.add(pipe([[0.34,PY-0.07,0],[0.3,PY-0.15,0.05],[0.2,PY-0.16,0.12]],0.006,M('copper'))); });
+part('osg', [-0.3,0,-0.55], g=>{ g.add(cylX(0.055,0.055,0.18,M('acc'),0.04,0.20,-0.48)); g.add(cylX(0.04,0.04,0.08,M('steel'),0.17,0.20,-0.48)); g.add(box(0.06,0.05,0.05,M('acc'),0.02,0.27,-0.49)); });
+part('feather_pump', [-0.3,0.35,-0.5], g=>{ g.add(cylX(0.04,0.04,0.16,M('acc'),-0.10,0.50,-0.33)); g.add(box(0.05,0.06,0.05,M('rubber'),-0.15,0.5,-0.33)); g.add(pipe([[-0.04,0.5,-0.33],[0.02,0.47,-0.3],[0.06,0.44,-0.26]],0.006,M('copper'))); });
+part('prop_brake', [-0.3,0.35,0.5], g=>{ g.add(cylX(0.07,0.07,0.08,M('acc'),-0.12,0.50,0.33)); g.add(cylX(0.03,0.03,0.05,M('steel'),-0.18,0.50,0.33)); g.add(pipe([[-0.12,0.57,0.33],[-0.05,0.66,0.36],[0.2,0.70,0.36]],0.006,M('copper'))); });
+part('acw_gen', [0,0,0.6], g=>{ g.add(cylX(0.08,0.08,0.30,M('acc'),0.42,0.22,0.46)); g.add(cylX(0.05,0.085,0.03,M('acc'),0.255,0.22,0.46)); g.add(cylX(0.06,0.06,0.04,M('rubber'),0.59,0.22,0.46)); g.add(box(0.1,0.06,0.04,M('acc'),0.45,0.30,0.50)); });
+part('np_probe', [0,0,0.6], g=>{ const s=mesh(new THREE.CylinderGeometry(0.012,0.012,0.09,12),M('acc'),0,0,0); s.rotation.x=Math.PI/2; s.position.set(0.0,0.26,0.32); g.add(s); g.add(box(0.03,0.03,0.03,M('rubber'),0.0,0.26,0.37)); });
+
+// --- Inlet & structure ---
+part('inlet_duct', [-0.2,-0.5,0], g=>{
+  const c=new THREE.CatmullRomCurve3([V3(-0.30,-0.56,0),V3(0.05,-0.56,0),V3(0.35,-0.50,0),V3(0.52,-0.36,0),V3(0.58,-0.2,0)]);
+  const m=new THREE.Mesh(new THREE.TubeGeometry(c,40,0.13,20,false), M('glass')); m.castShadow=false; g.add(m);
+  const lip=torusX(0.13,0.02,M('case'),-0.30,-0.56); g.add(lip); g.add(cylX(0.13,0.13,0.05,M('glass'),0.57,-0.2,0));
+});
+part('front_inlet_case', [-0.35,0.65,0], g=>{
+  const m=M('case'); casing(g.add(tubeX(0.34,0.31,0.20,m,0.35))&&g.children[0]);
+  g.add(tubeX(0.09,0.05,0.2,m,0.35)); for(let i=0;i<6;i++){ const s=box(0.16,0.24,0.03,m,0,0.19,0); g.add(radial(s,0.35,i/6*TAU+Math.PI/6)); }
+  g.add(torusX(0.345,0.014,m,0.26)); g.add(torusX(0.345,0.014,m,0.44)); g.add(boltRing(0.33,28,M('steel'),0.255,0.007)); g.add(boltRing(0.33,28,M('steel'),0.452,0.007));
+  g.add(box(0.05,0.02,0.03,M('rubber'),0.3,0.36,0.06)); g.add(box(0.05,0.02,0.03,M('rubber'),0.3,0.36,-0.06));
+});
+part('rear_inlet_case', [-0.15,0.65,0], g=>{
+  const m=M('case'); const shell=latheX([[0.45,0.31],[0.45,0.345],[0.60,0.345],[0.63,0.30],[0.63,0.24],[0.58,0.22],[0.53,0.13],[0.50,0.09],[0.45,0.09]], m, 0); casing(shell); g.add(shell);
+  g.add(torusX(0.345,0.014,m,0.62)); g.add(boltRing(0.33,28,M('steel'),0.63,0.007));
+  for(let i=0;i<7;i++){ const s=box(0.10,0.22,0.025,m,0,0.20,0); g.add(radial(s,0.53,i/7*TAU)); } // inlet struts
+  const t18=mesh(new THREE.CylinderGeometry(0.01,0.01,0.06,10),M('acc'),0,0.30,0); g.add(radial(t18,0.50,-0.5)); g.add(radial(box(0.03,0.03,0.03,M('rubber'),0,0.36,0),0.50,-0.5));
+});
+part('oil_tank', [-0.15,-0.55,0], g=>{
+  const m=M('case'); const tank=latheX([[0.45,0.34],[0.47,0.40],[0.60,0.40],[0.62,0.34]], m, 0, 0, 0, 64); tank.geometry = new THREE.LatheGeometry([[0.45,0.34],[0.47,0.40],[0.60,0.40],[0.62,0.34],[0.45,0.34]].map(p=>new THREE.Vector2(p[1],p[0])), 40, 0.262, 2.618); g.add(tank);
+  const cap=mesh(new THREE.CylinderGeometry(0.03,0.03,0.04,16),M('fuel'),0,0,0); g.add(radial(cap,0.52,Math.PI+0.9)); cap.position.y=0.41;
+  const sight=box(0.05,0.03,0.01,M('glass'),0,0.405,0); g.add(radial(sight,0.56,Math.PI-0.9));
+});
+part('eec', [-0.3,0,0.6], g=>{ g.add(box(0.17,0.20,0.06,M('acc'),0.35,0.02,0.375)); for(let i=0;i<4;i++) g.add(box(0.02,0.02,0.03,M('rubber'),0.29+i*0.04,0.13,0.39)); g.add(pipe([[0.42,0.02,0.40],[0.5,-0.1,0.42],[0.6,-0.3,0.3],[0.75,-0.36,0.1]],0.007,M('rubber'))); });
+part('afu', [-0.3,-0.25,0.6], g=>{ g.add(box(0.12,0.08,0.05,M('acc'),0.35,-0.17,0.37)); g.add(box(0.03,0.02,0.02,M('rubber'),0.35,-0.12,0.38)); });
+part('exciters', [-0.3,0,-0.6], g=>{
+  [0.06,-0.06].forEach(y=>{ g.add(box(0.12,0.09,0.06,M('acc'),0.35,y,-0.375)); g.add(pipe([[0.41,y,-0.40],[0.6,y-0.15,-0.42],[0.9,-0.28,-0.36],[1.2,-0.30,-0.2],[1.42,-0.27,-0.13]],0.006,M('fuel'))); });
+});
+
+// --- Compressors ---
+part('lp_impeller', [-0.1,0,0], g=>{ g.add(rotor('lp', impeller(0.10,0.19,0.09,15,M('ti'),M('ti'))).translateX(0.685)); });
+part('lp_diffuser', [0,0.65,0], g=>{
+  const m=M('case'); const shell=tubeX(0.345,0.315,0.16,m,0.71); casing(shell); g.add(shell); g.add(torusX(0.35,0.014,m,0.79)); g.add(boltRing(0.335,28,M('steel'),0.795,0.007));
+  g.add(pipesRing(12, [[0.72,0.22],[0.75,0.29],[0.86,0.30],[0.95,0.20],[0.985,0.115]], 0.024, M('steel'), 0.5));
+  g.add(tubeX(0.31,0.20,0.03,m,0.745)); // diffuser vane plate
+});
+part('bleed_p25', [0,0.75,-0.25], g=>{ g.add(cylX(0.035,0.035,0.06,M('steel'),0.75,0.30,-0.12).rotateX(0)); const y=new THREE.Group(); y.add(mesh(new THREE.CylinderGeometry(0.03,0.03,0.08,16),M('steel'),0,0.37,0)); y.add(box(0.05,0.05,0.05,M('acc'),0,0.43,0)); g.add(radial(y,0.76,0.45)); g.add(pipe([[0.76,0.46*Math.cos(0.45),0.46*Math.sin(0.45)],[0.9,0.5,0.15],[1.2,0.5,0.2]],0.02,M('steel'))); });
+part('intercompressor_case', [0.1,0.7,0], g=>{
+  const m=M('caseD'); const shell=latheX([[0.79,0.30],[0.79,0.33],[0.90,0.33],[0.99,0.30],[1.0,0.25],[0.99,0.21],[0.88,0.21],[0.80,0.28]], m, 0); casing(shell); g.add(shell);
+  g.add(torusX(0.33,0.012,m,0.80)); g.add(torusX(0.31,0.012,m,0.985)); g.add(boltRing(0.30,24,M('steel'),0.995,0.007));
+  [[0.31,0.06,0.0],[-0.31,0.06,0.0]].forEach(p=>g.add(box(0.12,0.06,0.07,M('acc'),0.9,p[1],p[0]))); // lateral mount pads
+  g.add(radial(mesh(new THREE.CylinderGeometry(0.04,0.04,0.06,16),M('acc'),0,0.26,0),0.86,Math.PI)); // switching valve bulge (bottom)
+});
+part('ibv', [0.1,0.95,0], g=>{ g.add(box(0.10,0.06,0.10,M('acc'),0.9,0.35,0)); g.add(cylX(0.03,0.03,0.05,M('steel'),0.9,0.40,0).rotateZ(Math.PI/2)); g.add(mesh(new THREE.CylinderGeometry(0.035,0.035,0.06,16),M('steel'),0.9,0.42,0)); g.add(pipe([[0.9,0.45,0],[0.95,0.55,-0.1],[1.05,0.55,-0.3]],0.02,M('steel'))); });
+part('hp_impeller', [0.1,0,0], g=>{ g.add(rotor('hp', impeller(0.075,0.15,0.075,17,M('ti'),M('ti'))).translateX(1.025)); });
+part('hp_diffuser', [0.25,0.65,0], g=>{ g.add(pipesRing(14, [[1.06,0.17],[1.09,0.24],[1.17,0.285],[1.30,0.29]], 0.019, M('steel'), 0.4)); g.add(tubeX(0.27,0.16,0.025,M('caseD'),1.075)); });
+part('bleed_p3', [0.3,0.85,0], g=>{ const v=new THREE.Group(); v.add(mesh(new THREE.CylinderGeometry(0.035,0.035,0.08,16),M('steel'),0,0.36,0)); v.add(box(0.06,0.06,0.06,M('acc'),0,0.43,0)); g.add(radial(v,1.22,-0.5)); g.add(pipe([[1.22,0.46*Math.cos(-0.5),0.46*Math.sin(-0.5)],[1.15,0.5,-0.3],[1.05,0.55,-0.32]],0.02,M('steel'))); });
+
+// --- Combustion ---
+part('gg_case', [0.4,0.7,0], g=>{
+  const m=M('caseD'); const shell=latheX([[1.0,0.30],[1.0,0.33],[1.36,0.33],[1.45,0.30],[1.46,0.26],[1.46,0.2]], m, 0); casing(shell); g.add(shell);
+  g.add(torusX(0.335,0.012,m,1.01)); g.add(torusX(0.315,0.012,m,1.44)); g.add(boltRing(0.30,24,M('steel'),1.455,0.007));
+  g.add(box(0.06,0.02,0.03,M('rubber'),1.2,0.34,0)); // lifting bracket 12 o'clock
+  [1.08,1.40].forEach(x=>g.add(radial(mesh(new THREE.CylinderGeometry(0.012,0.012,0.05,10),M('steel'),0,0.34,0),x,Math.PI))); // drain valves
+});
+part('combustor', [0.35,0.4,0], g=>{
+  const liner=latheX([[1.13,0.19],[1.14,0.22],[1.15,0.275],[1.35,0.28],[1.39,0.25],[1.39,0.215],[1.36,0.20],[1.2,0.20],[1.16,0.19]], M('hot'), 0, 0, 0, 72); g.add(liner);
+  g.add(tubeX(0.203,0.195,0.22,M('hotD'),1.27)); // inner liner wall
+});
+part('fuel_nozzles', [0.45,0.6,0], g=>{
+  g.add(torusX(0.355,0.012,M('fuel'),1.42)); // manifold
+  for(let i=0;i<14;i++){ const a=i/14*TAU+0.1; const n=new THREE.Group(); const body=mesh(new THREE.CylinderGeometry(0.014,0.014,0.09,12),M('fuel'),0,0.30,0); body.rotation.x=Math.PI/2; n.add(body);
+    const tip=cylX(0.01,0.02,0.05,M('steel'),-0.09,0.215,0); n.add(tip); n.add(mesh(new THREE.CylinderGeometry(0.01,0.01,0.05,8),M('fuel'),0,0.33,0)); g.add(radial(n,1.43,a)); }
+  g.add(box(0.07,0.07,0.06,M('fuel'),1.5,-0.3,-0.12)); // flow divider & dump valve
+  g.add(pipe([[1.5,-0.3,-0.12],[1.46,-0.34,-0.05],[1.42,-0.355,0]],0.008,M('fuel')));
+});
+part('igniters', [0.4,-0.6,0], g=>{
+  [Math.PI-0.55, Math.PI+0.55].forEach(a=>{ const s=new THREE.Group(); s.add(mesh(new THREE.CylinderGeometry(0.013,0.013,0.13,12),M('steel'),0,0.29,0)); s.add(mesh(new THREE.CylinderGeometry(0.02,0.02,0.04,12),M('fuel'),0,0.36,0)); g.add(radial(s,1.37,a)); });
+});
+
+// --- Turbines & exhaust ---
+part('hp_turbine', [0.2,0,0], g=>{ g.add(vaneRing(0.10,0.165,0.03,28,M('hotD')).translateX(1.115)); g.add(rotor('hp', turbineDisc(0.10,0.165,0.035,41,M('hot'),M('ti'),0.55)).translateX(1.16)); });
+part('lp_turbine', [0.3,0,0], g=>{ g.add(vaneRing(0.105,0.175,0.03,30,M('hotD'),0.5).translateX(1.205)); g.add(rotor('lp', turbineDisc(0.105,0.175,0.035,45,M('hot'),M('ti'),-0.55)).translateX(1.25)); });
+part('turbine_support_case', [0.5,0.65,0], g=>{
+  const m=M('caseD'); const shell=latheX([[1.46,0.20],[1.46,0.30],[1.60,0.30],[1.63,0.27],[1.63,0.2]], m, 0); casing(shell); g.add(shell);
+  g.add(latheX([[1.39,0.19],[1.39,0.21],[1.60,0.21],[1.60,0.19]], M('hotD'), 0)); // interturbine duct
+  g.add(tubeX(0.10,0.07,0.32,M('hot'),1.44)); // bearing housing 6/7
+  for(let i=0;i<9;i++){ const p=new THREE.Group(); p.add(mesh(new THREE.CylinderGeometry(0.009,0.009,0.14,10),M('acc'),0,0.26,0)); p.add(mesh(new THREE.CylinderGeometry(0.016,0.016,0.03,10),M('rubber'),0,0.335,0)); g.add(radial(p,1.52,i/9*TAU+0.2)); }
+  g.add(torusX(0.34,0.006,M('rubber'),1.53)); // T6 bus-bar ring
+  g.add(torusX(0.305,0.012,m,1.615)); g.add(boltRing(0.29,24,M('steel'),1.625,0.007));
+});
+part('power_turbine', [0.6,0,0], g=>{
+  g.add(vaneRing(0.11,0.20,0.03,32,M('hotD')).translateX(1.655)); g.add(rotor('pt', turbineDisc(0.11,0.20,0.04,49,M('hot'),M('ti'),0.5)).translateX(1.70));
+  g.add(vaneRing(0.115,0.215,0.03,34,M('hotD')).translateX(1.745)); g.add(rotor('pt', turbineDisc(0.115,0.215,0.04,53,M('hot'),M('ti'),0.5)).translateX(1.79));
+  g.add(rotor('pt', cylX(0.06,0.06,0.16,M('steel'),1.75)));
+});
+part('exhaust', [0.9,0,0], g=>{
+  const m=M('caseD'); const shell=latheX([[1.63,0.27],[1.63,0.30],[1.82,0.30],[2.05,0.33],[2.10,0.33],[2.10,0.31],[2.05,0.31],[1.84,0.28],[1.82,0.24]], m, 0); casing(shell); g.add(shell);
+  g.add(latheX([[1.83,0.08],[1.95,0.14],[2.06,0.15],[2.06,0.0]], M('hotD'), 0)); // tail cone
+  g.add(torusX(0.305,0.012,m,1.64));
+});
+
+// --- Shafts & bearings ---
+part('pt_shaft', [0,-0.35,0], g=>{ g.add(rotor('pt', cylX(0.028,0.028,1.375, M('steel'), 1.0075))); });
+part('lp_shaft', [0,-0.2,0], g=>{ g.add(rotor('lp', tubeX(0.045,0.034,0.58, M('steel'), 0.96))); });
+part('hp_shaft', [0,-0.1,0], g=>{ g.add(rotor('hp', tubeX(0.065,0.052,0.17, M('steel'), 1.09))); g.add(rotor('hp', gear(0.05,0.02,20,M('steel'),0.6)).translateX(0.98)); });
+part('bearings', [0,-0.5,0], g=>{
+  const b=(x,R,r,kind)=>{ g.add(torusX(R,r,M('steel'),x)); g.add(torusX(R+r*1.6,r*0.5,M(kind==='ball'?'copper':'acc'),x)); };
+  b(0.37,0.045,0.012,'ball'); b(0.52,0.045,0.012,'roller'); b(0.64,0.06,0.012,'ball'); b(0.975,0.08,0.012,'ball'); b(1.19,0.078,0.010,'roller'); b(1.30,0.055,0.010,'roller'); b(1.60,0.045,0.011,'roller');
+});
+
+// --- Accessory gearbox & systems ---
+part('agb', [0,-0.6,0], g=>{ const h=box(0.22,0.14,0.36,M('caseD'),0.93,-0.35,0); casing(h); g.add(h); g.add(box(0.16,0.04,0.30,M('caseD'),0.95,-0.27,0)); g.add(boltRing(0.05,6,M('steel'),0.80,0.006,-0.35,0.18)); });
+part('tower_shaft', [0,-0.45,0], g=>{ const s=mesh(new THREE.CylinderGeometry(0.02,0.02,0.30,16),M('steel'),0.98,-0.15,0); g.add(s); const bev=mesh(new THREE.CylinderGeometry(0.05,0.03,0.03,24),M('steel'),0.98,-0.30,0); g.add(bev); });
+part('starter_gen', [-0.1,-0.8,0.2], g=>{ g.add(cylX(0.075,0.075,0.34,M('acc'),0.62,-0.42,0.19)); g.add(cylX(0.05,0.08,0.03,M('acc'),0.435,-0.42,0.19)); g.add(box(0.14,0.05,0.06,M('rubber'),0.6,-0.5,0.19)); g.add(cylX(0.03,0.03,0.04,M('rubber'),0.8,-0.42,0.19)); });
+part('fuel_pump_hmu', [0,-0.8,-0.25], g=>{
+  g.add(cylX(0.05,0.05,0.16,M('acc'),0.72,-0.40,-0.16)); // HP fuel pump
+  g.add(box(0.20,0.14,0.14,M('acc'),1.06,-0.38,-0.17)); // HMU
+  g.add(cylX(0.045,0.045,0.14,M('steel'),1.05,-0.40,0.15)); g.add(cylX(0.05,0.05,0.04,M('fuel'),1.0,-0.40,0.15)); // fuel heater + FCOC
+  g.add(mesh(new THREE.CylinderGeometry(0.03,0.03,0.05,16),M('rubber'),1.12,-0.28,-0.17)); // PLA lever/RVDT
+  g.add(pipe([[1.16,-0.38,-0.17],[1.3,-0.38,-0.16],[1.45,-0.34,-0.14],[1.5,-0.3,-0.12]],0.008,M('fuel')));
+  g.add(pipe([[0.8,-0.40,-0.16],[0.9,-0.44,-0.1],[0.98,-0.40,0.15]],0.008,M('fuel'))); g.add(pipe([[1.0,-0.4,-0.3],[1.1,-0.26,-0.36],[1.2,-0.15,-0.34]],0.007,M('rubber')));
+});
+part('oil_pumps', [0,-0.95,0], g=>{ g.add(box(0.08,0.06,0.10,M('steel'),0.86,-0.36,0.02)); g.add(box(0.06,0.05,0.10,M('steel'),0.95,-0.36,0.02)); g.add(cylX(0.035,0.035,0.12,M('acc'),0.95,-0.32,-0.22)); g.add(pipe([[0.9,-0.42,0],[0.75,-0.46,0],[0.6,-0.40,0],[0.55,-0.32,0.1]],0.009,M('copper'))); });
+part('sensors', [0,0,0.5], g=>{
+  [1.5,-1.5].forEach(a=>{ const p=new THREE.Group(); p.add(mesh(new THREE.CylinderGeometry(0.01,0.01,0.06,10),M('acc'),0,0.36,0)); p.add(box(0.025,0.02,0.025,M('rubber'),0,0.40,0)); g.add(radial(p,0.50,Math.PI+a)); }); // NH1/NH2 on rear inlet case
+  const nl=new THREE.Group(); nl.add(mesh(new THREE.CylinderGeometry(0.01,0.01,0.07,10),M('acc'),0,0.34,0)); g.add(radial(nl,0.9,TAU*0.30)); // NL under left pad
+  const pamb=box(0.04,0.03,0.02,M('acc'),0.25,0.06,0.40); g.add(pamb);
+});
+
+// ---------- store base positions ----------
+Object.values(parts).forEach(p=>{ p.base.copy(p.group.position); });
+
+// ---------- Labels ----------
+// [id, short text, anchor xyz, label xyz]
+const LABELS = [
+ ["propshaft","Prop shaft",-0.24,0.42,0,-0.35,0.80,0],["rgb_front","Reduction gearbox",0.10,0.74,0,0.0,0.98,0],["pvm","PVM",0.34,0.48,0,0.34,0.62,0],
+ ["front_inlet_case","Front inlet case",0.35,0.35,0,0.40,0.98,0],["lp_impeller","LP impeller",0.69,0.19,0,0.69,0.80,0],["ibv","Handling bleed valve",0.9,0.44,0,0.9,0.98,0],
+ ["hp_impeller","HP impeller",1.03,0.15,0,1.03,0.62,0],["gg_case","Gas generator case",1.22,0.33,0,1.22,0.80,0],["combustor","Combustor",1.27,0.26,0,1.27,0.46,0],
+ ["fuel_nozzles","Fuel manifold",1.42,0.36,0,1.45,0.98,0],["turbine_support_case","T6 / ITT probes",1.52,0.34,0,1.60,0.46,0],["power_turbine","Power turbine",1.75,0.22,0,1.78,0.80,0],
+ ["exhaust","Exhaust",2.05,0.33,0,2.05,0.98,0],
+ ["inlet_duct","Air intake",0.05,-0.56,0,0.05,-0.86,0],["oil_tank","Oil tank",0.53,-0.40,0,0.53,-0.66,0],["starter_gen","Starter-generator",0.62,-0.50,0,0.62,-0.92,0],
+ ["agb","Accessory gearbox",0.90,-0.42,0,0.90,-0.66,0],["fuel_pump_hmu","HMU & fuel pump",1.06,-0.45,0,1.06,-0.92,0],["igniters","Igniters",1.37,-0.36,0,1.37,-0.66,0],
+ ["eec","EEC",0.35,0.02,0.41,0.35,-0.28,0.85],["acw_gen","ACW generator",0.42,0.22,0.54,0.20,0.44,0.95],["exciters","Ignition exciters",0.35,0.0,-0.41,0.35,-0.28,-0.85]
+];
+const labelGroup = new THREE.Group(); labelGroup.visible=false; scene.add(labelGroup);
+{ const lp=[]; LABELS.forEach(l=>{ lp.push(l[2],l[3],l[4], l[5],l[6],l[7]); }); const lg=new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp,3));
+  const lines=new THREE.LineSegments(lg, new THREE.LineBasicMaterial({color:0x7d8a96, transparent:true, opacity:0.75, depthTest:false})); lines.renderOrder=9; labelGroup.add(lines); }
+function makeLabel(text){ const c=document.createElement('canvas'); const g=c.getContext('2d'); const f='600 34px "Barlow Condensed", Arial Narrow, Arial'; g.font=f; const w=Math.ceil(g.measureText(text).width)+28; c.width=w; c.height=48; g.font=f; g.fillStyle='rgba(18,26,32,0.86)'; g.beginPath(); g.roundRect?g.roundRect(0,0,w,48,8):g.rect(0,0,w,48); g.fill(); g.fillStyle='#fff'; g.textBaseline='middle'; g.fillText(text,14,25);
+  const t=new THREE.CanvasTexture(c); if('colorSpace' in t) t.colorSpace=THREE.SRGBColorSpace; const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t, depthTest:false, transparent:true, sizeAttenuation:false})); s.scale.set(w/48*0.026,0.026,1); s.renderOrder=10; return s; }
+LABELS.forEach(l=>{ const s=makeLabel(l[1]); s.position.set(l[5],l[6],l[7]); s.center.set(0.5, l[6]<0?1:0); s.userData.part=l[0]; labelGroup.add(s); });
+
+// ---------- Gas path particles ----------
+const flowGroup = new THREE.Group(); flowGroup.visible=false; scene.add(flowGroup);
+const NB=24, NP=720, curves=[];
+const RADIAL = [[0.60,0.19],[0.64,0.10],[0.69,0.14],[0.71,0.21],[0.75,0.29],[0.86,0.30],[0.95,0.20],[0.99,0.11],[1.03,0.14],[1.06,0.17],[1.10,0.25],[1.18,0.29],[1.30,0.30],[1.38,0.27],[1.40,0.22],[1.36,0.19],[1.25,0.20],[1.17,0.20],[1.13,0.15],[1.16,0.13],[1.22,0.14],[1.30,0.17],[1.45,0.19],[1.60,0.19],[1.70,0.16],[1.80,0.17],[1.95,0.22],[2.15,0.26]];
+for(let b=0;b<NB;b++){ const a=b/NB*TAU, sw=0.35; const pts=[V3(-0.34,-0.56+0.06*Math.cos(a),0.06*Math.sin(a)),V3(0.05,-0.55+0.08*Math.cos(a),0.08*Math.sin(a)),V3(0.38,-0.47+0.07*Math.cos(a),0.07*Math.sin(a)),V3(0.53,-0.32+0.05*Math.cos(a),0.05*Math.sin(a))];
+  RADIAL.forEach((p,k)=>{ const ang=a+sw*Math.min(k,8)/8; pts.push(V3(p[0], p[1]*Math.cos(ang), p[1]*Math.sin(ang))); });
+  curves.push(new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.4)); }
+const fpos=new Float32Array(NP*3), fcol=new Float32Array(NP*3), ft=new Float32Array(NP), fb=new Uint8Array(NP), fs=new Float32Array(NP);
+for(let i=0;i<NP;i++){ ft[i]=Math.random(); fb[i]=(Math.random()*NB)|0; fs[i]=0.055+Math.random()*0.03; }
+const fgeo=new THREE.BufferGeometry(); fgeo.setAttribute('position', new THREE.BufferAttribute(fpos,3)); fgeo.setAttribute('color', new THREE.BufferAttribute(fcol,3));
+const fmat=new THREE.PointsMaterial({size:0.022, vertexColors:true, transparent:true, opacity:0.95, depthWrite:false, sizeAttenuation:true});
+const fpoints=new THREE.Points(fgeo,fmat); fpoints.frustumCulled=false; flowGroup.add(fpoints);
+const STOPS=[[0,0x3B82D8],[0.14,0x4F9BE0],[0.30,0x7EC8E3],[0.42,0xE8C34A],[0.50,0xF2A23A],[0.56,0xF07A2A],[0.63,0xE04A24],[0.72,0xC8322B],[0.85,0xB86A5A],[1,0x8A8A8A]].map(s=>[s[0],new THREE.Color(s[1])]);
+const tmpC=new THREE.Color();
+function flowColor(t,out){ for(let i=1;i<STOPS.length;i++){ if(t<=STOPS[i][0]){ const k=(t-STOPS[i-1][0])/(STOPS[i][0]-STOPS[i-1][0]); out.copy(STOPS[i-1][1]).lerp(STOPS[i][1],k); return out; } } return out.copy(STOPS[STOPS.length-1][1]); }
+const tmpV=V3();
+function stepFlow(dt){ for(let i=0;i<NP;i++){ ft[i]+=dt*fs[i]*(0.7+0.6*(ft[i]>0.45?1:0.6)); if(ft[i]>1){ ft[i]-=1; fb[i]=(Math.random()*NB)|0; } curves[fb[i]].getPointAt(ft[i],tmpV); fpos[i*3]=tmpV.x; fpos[i*3+1]=tmpV.y; fpos[i*3+2]=tmpV.z; flowColor(ft[i],tmpC); fcol[i*3]=tmpC.r; fcol[i*3+1]=tmpC.g; fcol[i*3+2]=tmpC.b; } fgeo.attributes.position.needsUpdate=true; fgeo.attributes.color.needsUpdate=true; }
+stepFlow(0);
+
+// ---------- Clipping ----------
+const cutPlane = new THREE.Plane(V3(0,0,1), 0);
+let cutOn=false;
+function applyCut(){ const z=parseFloat(cutSlider.value); cutPlane.constant = -z; document.getElementById('cutOut').value=Math.round(z*1000)+' mm'; allMats.forEach(m=>{ m.clippingPlanes = cutOn?[cutPlane]:null; m.needsUpdate=false; }); fmat.clippingPlanes = null; }
+
+// ---------- State controls ----------
+const explodeSlider=document.getElementById('explode'), xraySlider=document.getElementById('xray'), cutSlider=document.getElementById('cut');
+const btn = id=>document.getElementById(id);
+let spinOn=false, flowOn=false, colorMode=false, propOn=false;
+function setExplode(e){ Object.values(parts).forEach(p=>{ p.group.position.copy(p.base).addScaledVector(p.dir, e*1.15); }); labelGroup.visible = labelsOn && e<0.05; btn('explodeOut').value=Math.round(e*100)+' %'; }
+function setXray(v){ casingMeshes.forEach(m=>{ const mat=m.material; if(mat.userData.kind==='glass') return; mat.transparent = v<0.999; mat.opacity=v; mat.depthWrite = v>0.6; }); btn('xrayOut').value=Math.round(v*100)+' %'; }
+const legendEl=document.getElementById('legend'); const legendHTML=legendEl.innerHTML;
+function setColorMode(on){ colorMode=on; legendEl.innerHTML = on ? Object.values(MODULES).map(m=>`<i style="background:#${m.color.toString(16).padStart(6,'0')}"></i><span>${m.name}</span>`).join('') : legendHTML; Object.values(parts).forEach(p=>{ const col=new THREE.Color(MODULES[C[p.id].mod].color); Object.values(p.mats).forEach(m=>{ if(m.userData.kind==='glass') return; if(on){ m.color.copy(col); m.metalness=0.35; m.roughness=0.55; } else { m.color.copy(m.userData.orig); Object.assign(m,{metalness:BASE[m.userData.kind].metalness, roughness:BASE[m.userData.kind].roughness}); } }); }); btn('colorBtn').classList.toggle('on',on); }
+let labelsOn=false;
+btn('labelBtn').onclick=()=>{ labelsOn=!labelsOn; labelGroup.visible=labelsOn && parseFloat(explodeSlider.value)<0.05; btn('labelBtn').classList.toggle('on',labelsOn); };
+btn('spinBtn').onclick=()=>{ spinOn=!spinOn; btn('spinBtn').classList.toggle('on',spinOn); };
+btn('flowBtn').onclick=()=>{ setFlow(!flowOn); };
+function setFlow(on){ flowOn=on; flowGroup.visible=on; btn('flowBtn').classList.toggle('on',on); if(on && parseFloat(xraySlider.value)>0.6){ xraySlider.value=0.28; setXray(0.28); } }
+btn('propBtn').onclick=()=>{ propOn=!propOn; parts.prop.group.visible=propOn; btn('propBtn').classList.toggle('on',propOn); };
+parts.prop.group.visible=false; parts.prop.meshes.forEach(m=>m.castShadow=false);
+btn('colorBtn').onclick=()=>setColorMode(!colorMode);
+btn('cutBtn').onclick=()=>{ cutOn=!cutOn; cutSlider.disabled=!cutOn; btn('cutBtn').classList.toggle('on',cutOn); applyCut(); if(cutOn) flyTo({theta:-Math.PI/2, phi:1.35, dist:2.9, target:V3(0.85,0.02,0)}); };
+cutSlider.oninput=applyCut; explodeSlider.oninput=e=>setExplode(parseFloat(e.target.value)); xraySlider.oninput=e=>{ autoXray=null; setXray(parseFloat(e.target.value)); };
+
+// views
+const VIEWS = { iso:{theta:-2.35,phi:1.15,dist:3.4,target:V3(0.8,0.05,0)}, left:{theta:Math.PI/2,phi:1.45,dist:3.3,target:V3(0.85,0.02,0)}, right:{theta:-Math.PI/2,phi:1.45,dist:3.3,target:V3(0.85,0.02,0)}, front:{theta:Math.PI,phi:1.35,dist:3.2,target:V3(0.6,0.1,0)}, rear:{theta:0,phi:1.35,dist:3.2,target:V3(1.2,0.05,0)}, top:{theta:-Math.PI/2,phi:0.12,dist:3.6,target:V3(0.85,0,0)}, gearbox:{theta:-2.0,phi:1.2,dist:1.5,target:V3(0.05,0.2,0)}, hot:{theta:-2.4,phi:1.25,dist:1.7,target:V3(1.35,0.02,0)} };
+document.querySelectorAll('.viewbtn').forEach(b=>b.onclick=()=>flyTo(VIEWS[b.dataset.view]));
+
+// ---------- Picking / selection ----------
+const ray=new THREE.Raycaster(); const ptr=new THREE.Vector2(); const tip=document.getElementById('tip');
+let selected=null, hovered=null;
+function hitPart(e){ const r=el.getBoundingClientRect(); ptr.x=((e.clientX-r.left)/r.width)*2-1; ptr.y=-((e.clientY-r.top)/r.height)*2+1; ray.setFromCamera(ptr,camera);
+  const objs=[]; Object.values(parts).forEach(p=>{ if(p.group.visible) objs.push(...p.meshes); });
+  const hits=ray.intersectObjects(objs,false);
+  for(const h of hits){ const m=h.object; if(m.userData.casing && m.material.opacity<0.35 && m.material.transparent) continue; if(cutOn && cutPlane.distanceToPoint(h.point)<0) continue; return m.userData.part; } return null; }
+function setEmissive(id, v){ if(!id) return; Object.values(parts[id].mats).forEach(m=>{ m.emissive.set(0x3FB4C8); m.emissiveIntensity=v; }); }
+function hover(e){ const id=hitPart(e); if(id!==hovered){ if(hovered && hovered!==selected) setEmissive(hovered,0); hovered=id; if(hovered && hovered!==selected) setEmissive(hovered,0.14); }
+  if(id){ tip.textContent=C[id].name; tip.style.opacity=1; const r=el.getBoundingClientRect(); tip.style.left=(e.clientX-r.left)+'px'; tip.style.top=(e.clientY-r.top)+'px'; el.style.cursor='pointer'; } else { tip.style.opacity=0; el.style.cursor=''; } }
+function pick(e){ const id=hitPart(e); select(id, false); }
+const INTERNAL=new Set(['lp_impeller','hp_impeller','hp_diffuser','combustor','igniters','hp_turbine','lp_turbine','power_turbine','pt_shaft','lp_shaft','hp_shaft','bearings','torque_shaft','rgb_stage1','rgb_stage2','tower_shaft','oil_pumps','fuel_nozzles','lp_diffuser']);
+let autoXray=null;
+function select(id, focus=true){ if(selected) setEmissive(selected,0); selected=id;
+  if(id && INTERNAL.has(id) && !cutOn && parseFloat(xraySlider.value)>0.6){ autoXray=parseFloat(xraySlider.value); xraySlider.value=0.3; setXray(0.3); }
+  else if((!id || !INTERNAL.has(id)) && autoXray!==null && !flowOn && tourIdx<0){ xraySlider.value=autoXray; setXray(autoXray); autoXray=null; }
+  if(id){ setEmissive(id,0.45); if(focus) focusPart(id); }
+  document.querySelectorAll('#tree li button').forEach(b=>b.classList.toggle('active', b.dataset.id===id)); renderInspector(id); }
+function focusPart(id){ const p=parts[id]; const wasVisible=p.group.visible; p.group.visible=true; const bb=new THREE.Box3().setFromObject(p.group); p.group.visible=wasVisible; const c=bb.getCenter(V3()); const s=bb.getSize(V3()).length(); const o={target:c, dist:Math.max(0.6, Math.min(3.5, s*1.6+0.35))};
+  if(Math.abs(c.z)>0.2) o.theta = c.z>0 ? Math.PI/2+0.45 : -Math.PI/2-0.45; if(c.y>0.42) o.phi=0.75; else if(c.y<-0.28) o.phi=1.75; else if(Math.abs(c.z)>0.2) o.phi=1.3; flyTo(o); }
+
+// ---------- Tree ----------
+const tree=document.getElementById('tree');
+{ const order=Object.keys(MODULES); const frag=document.createDocumentFragment(); const h=document.createElement('div'); h.className='eyebrow'; h.textContent='Modules · click a part'; frag.appendChild(h);
+  order.forEach(mod=>{ const ids=Object.values(C).filter(c=>c.mod===mod).map(c=>c.id); const d=document.createElement('div'); d.className='module';
+    const b=document.createElement('button'); b.innerHTML=`<span class="sw" style="background:#${MODULES[mod].color.toString(16).padStart(6,'0')}"></span><span class="chev">▼</span>${MODULES[mod].name}<span class="n">${ids.length}</span>`; b.onclick=()=>d.classList.toggle('collapsed'); d.appendChild(b);
+    const ul=document.createElement('ul'); ids.forEach(id=>{ const li=document.createElement('li'); const bb=document.createElement('button'); bb.dataset.id=id; bb.innerHTML=`<span class="dot"></span>${C[id].name}`; bb.onclick=()=>{ if(id==='prop'&&!propOn) btn('propBtn').click(); select(id,true); if(innerWidth<=980){ app.classList.remove('show-tree'); app.classList.add('show-inspector'); } }; li.appendChild(bb); ul.appendChild(li); }); d.appendChild(ul); frag.appendChild(d); });
+  const o=document.createElement('button'); o.className='tbtn'; o.style.margin='14px 6px'; o.textContent='Engine overview'; o.onclick=()=>select(null); frag.appendChild(o); tree.appendChild(frag); }
+
+// ---------- Inspector ----------
+const insp=document.getElementById('inspector');
+const modTag=mod=>`<span class="mod-tag"><i style="background:#${MODULES[mod].color.toString(16).padStart(6,'0')}"></i>${MODULES[mod].name}</span>`;
+function renderInspector(id){
+  if(!id){ insp.innerHTML=`<div class="overview"><span class="mod-tag">Engine overview</span><h2>PW127N · free-turbine turboprop</h2>
+  <p>Two-spool gas generator with a separate two-stage power turbine, all on three concentric shafts, driving an offset two-stage reduction gearbox. Air enters under the spinner, is compressed by two centrifugal impellers, burned in a reverse-flow annular combustor wrapped around the turbines, and leaves through the rear. The PW127N is the PW127M with revised control software: the same 2 051 kW take-off rating is held flat to 44 °C instead of 39 °C (TCDS), which is where its advertised 4.5 % hot-and-high take-off gain comes from. A PW127M can be converted in the field.</p>
+  <div class="kv"><div><b>2 750 shp</b><span>RTO = TCDS max TO, 2 051 kW</span></div><div><b>2 475 shp</b><span>TO = TCDS normal TO, 1 846 kW</span></div><div><b>2 500 shp</b><span>MCT = TCDS max cont., 1 864 kW</span></div><div><b>2 192 / 2 132</b><span>Climb / cruise shp</span></div><div><b>2 130 × 720 mm</b><span>Length × width (TCDS iss. 7)</span></div><div><b>481.7 kg</b><span>Dry weight (TCDS)</span></div><div><b>800 °C</b><span>ITT max TO / MCT (TCDS)</span></div><div><b>44 °C</b><span>Flat-rate OAT, TO (M: 39 °C)</span></div><div><b>48 °C</b><span>Flat-rate OAT, max continuous</span></div><div><b>1 200 rpm</b><span>NP 100 %</span></div></div>
+  <h4>Gas path, then power path</h4><div class="flow">${TOUR.map((s,i)=>`<div><i style="background:${['#3B82D8','#4F9BE0','#7EC8E3','#7EC8E3','#E8C34A','#F2A23A','#F07A2A','#E04A24','#C8322B','#B86A5A','#9A7A70','#8A8A8A','#7D8A96','#7D8A96','#4F8FC6','#4F8FC6','#4F8FC6'][i]}"></i><span>${s.t}</span></div>`).join('')}</div>
+  <h4>Using this model</h4><ul><li><b>Click</b> any part in the 3D view or the list to open its card.</li><li><b>Explode</b> separates modules along the axis; <b>Cutaway</b> sections the engine on a movable plane.</li><li><b>Casing opacity</b> lets you look through the cases; <b>Gas path</b> animates the air from intake to exhaust, coloured by temperature.</li><li><b>Spin rotors</b> shows the three independent shaft speeds and the gearbox reduction.</li><li>Take the <b>guided tour</b>: 12 gas-path stops from intake to exhaust, then 5 power-path stops from the power turbine to the propeller.</li></ul>
+  <div class="src">Sources: EASA TCDS IM.E.041 issue 7 (limits, dimensions, weights); ATR 42/72-600 Systems Guide (FCOM 1.16, ATA 61/72); P&amp;WC PW100 Engine Maintenance Manual ch. 72-00 (construction); Wikipedia PW100 family data. Geometry is a schematic reconstruction, not manufacturer CAD. Values marked ≈ are derived or family-generic; verify against your AFM / FCOM.</div></div>`; return; }
+  const c=C[id];
+  insp.innerHTML=`${modTag(c.mod)}<h2>${c.name}</h2><div class="loc">${c.loc}</div>
+  <div class="actions"><button class="tbtn" id="focusBtn">Focus</button><button class="tbtn" id="isoBtn">Whole engine</button></div>
+  <h4>What it does</h4><p>${c.fn}</p>
+  <h4>Key figures</h4><table>${c.nums.map(n=>{ const s=srcOf(c.id,n[0]); return `<tr><td>${n[0]}</td><td>${n[1]}${s?`<span class="tag t-${s==='~'?'D':s}" title="${s==='TCDS'?'EASA type certificate data sheet IM.E.041':s==='ATR'?'ATR 42/72-600 Systems Guide / FCOM':s==='EMM'?'P&WC PW100 engine maintenance manual':'derived or PW100-family value'}">${s==='~'?'≈':s}</span>`:''}</td></tr>`; }).join('')}</table><div class="srckey"><span><span class="tag t-TCDS">TCDS</span> certified limit</span><span><span class="tag">ATR</span> ATR systems guide</span><span><span class="tag">EMM</span> P&amp;WC manual</span><span><span class="tag">≈</span> derived / family</span></div>
+  <h4>Connected to</h4><ul class="conn">${c.conn.map(k=>`<li><button data-go="${k}">${C[k].name}</button></li>`).join('')}</ul>
+  <h4>For the pilot</h4><div class="note"><b>Operational note</b>${c.pilot}</div>
+  <div class="src">Construction from P&amp;WC EMM 72-00 D&amp;O; limits from EASA TCDS IM.E.041 and the ATR 42/72-600 Systems Guide. ≈ = derived / family value.</div>`;
+  insp.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ if(b.dataset.go==='prop'&&!propOn) btn('propBtn').click(); select(b.dataset.go,true); });
+  insp.querySelector('#focusBtn').onclick=()=>focusPart(id); insp.querySelector('#isoBtn').onclick=()=>flyTo(VIEWS.iso);
+  insp.scrollTop=0;
+}
+renderInspector(null);
+
+// ---------- Tour ----------
+let tourIdx=-1, tourSaved=null; const tourEl=document.getElementById('tour');
+function tourShow(i){ tourIdx=i; const s=TOUR[i]; tourEl.classList.add('open'); document.getElementById('tourStep').textContent=`${i<12?'Gas path':'Power path'} · stop ${i+1} / ${TOUR.length}`; tourEl.style.bottom=(document.querySelector('.hud').offsetHeight+8)+'px'; document.getElementById('tourTitle').textContent=s.t; document.getElementById('tourText').textContent=s.txt; document.getElementById('tourProg').style.width=((i+1)/TOUR.length*100)+'%';
+  if(s.id==='prop'&&!propOn) btn('propBtn').click(); select(s.id,true); btn('tourPrev').disabled=i===0; btn('tourNext').textContent=i===TOUR.length-1?'Finish':'Next ›'; }
+btn('tourBtn').onclick=()=>{ if(tourIdx>=0){ tourEnd(); return; } tourSaved={flow:flowOn, spin:spinOn, xray:parseFloat(xraySlider.value)}; if(!flowOn) setFlow(true); if(!spinOn) btn('spinBtn').click(); explodeSlider.value=0; setExplode(0); tourShow(0); btn('tourBtn').classList.add('on'); };
+btn('tourNext').onclick=()=>{ if(tourIdx>=TOUR.length-1) tourEnd(); else tourShow(tourIdx+1); };
+btn('tourPrev').onclick=()=>{ if(tourIdx>0) tourShow(tourIdx-1); };
+btn('tourClose').onclick=tourEnd;
+function tourEnd(){ tourEl.classList.remove('open'); tourIdx=-1; btn('tourBtn').classList.remove('on'); if(tourSaved){ if(flowOn!==tourSaved.flow) setFlow(tourSaved.flow); if(spinOn!==tourSaved.spin) btn('spinBtn').click(); xraySlider.value=tourSaved.xray; setXray(tourSaved.xray); autoXray=null; tourSaved=null; } select(null,false); flyTo(VIEWS.iso); }
+addEventListener('keydown', e=>{ if(tourIdx>=0){ if(e.key==='ArrowRight') btn('tourNext').click(); if(e.key==='ArrowLeft') btn('tourPrev').click(); if(e.key==='Escape') tourEnd(); } else if(e.key==='Escape') select(null); });
+
+// mobile tabs
+const app=document.getElementById('app');
+btn('mTree').onclick=()=>{ app.classList.toggle('show-tree'); app.classList.remove('show-inspector'); };
+btn('mInsp').onclick=()=>{ app.classList.toggle('show-inspector'); app.classList.remove('show-tree'); };
+btn('mHud').onclick=()=>{ app.classList.toggle('show-hud'); };
+btn('resetBtn').onclick=()=>{ if(tourIdx>=0) tourEnd(); autoXray=null; select(null,false); explodeSlider.value=0; setExplode(0); xraySlider.value=1; setXray(1); if(cutOn) btn('cutBtn').click(); cutSlider.value=0; applyCut(); if(flowOn) setFlow(false); if(spinOn) btn('spinBtn').click(); if(labelsOn) btn('labelBtn').click(); if(propOn) btn('propBtn').click(); if(colorMode) setColorMode(false); flyTo(VIEWS.iso); };
+
+// ---------- Resize / loop ----------
+function resize(){ const w=stage.clientWidth, h=stage.clientHeight; if(!w||!h) return; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stage); resize();
+const clock=new THREE.Clock(); const W={hp:8.0, lp:-6.6, pt:4.8, lay:-4.8*19/89, prop:4.8*19/89*38/135};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(){ requestAnimationFrame(loop); const dt=Math.min(0.05, clock.getDelta()); stepCam(dt); applyCam();
+  if(spinOn && !reduced){ for(const k in rotors){ rotors[k].forEach(o=>{ o.rotation.x += W[k]*dt; }); } }
+  if(flowOn && !reduced) stepFlow(dt);
+  renderer.render(scene,camera); }
+document.getElementById('loading').remove();
+setTimeout(()=>{ const h=document.getElementById('hint'); if(h) h.style.opacity=0; }, 9000);
+loop();
+})();
+</script>
